@@ -5,7 +5,7 @@ import { doc, getDoc, collection, query, limit, getDocs, where } from 'firebase/
 import { MenuItem, OperationType } from '../types';
 import { handleFirestoreError } from '../lib/dbService';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, Share2, Heart, Star, Clock, Flame, Info, Check, Plus, Minus, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, Share2, Heart, Star, Clock, Flame, Info, Check, Plus, Minus, ChevronRight, X, Box, Maximize2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 function DetailGallery({ images, name }: { images?: string[], name: string }) {
@@ -119,6 +119,7 @@ export function ItemDetailPage() {
   const [recommendations, setRecommendations] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [showAR, setShowAR] = useState(false);
 
   useEffect(() => {
     if (!restaurantId || !itemId) return;
@@ -238,6 +239,26 @@ export function ItemDetailPage() {
           </div>
         )}
 
+        {/* AR Entry Point */}
+        <div className="pt-2">
+          <button 
+            onClick={() => setShowAR(true)}
+            className="w-full flex items-center justify-between p-6 bg-gradient-to-r from-[#FF6B00] to-[#FF8A00] text-white rounded-[32px] shadow-xl shadow-orange-500/20 group relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                <Box size={24} className="animate-bounce" />
+              </div>
+              <div className="text-left">
+                <h4 className="font-black text-sm uppercase tracking-widest leading-none mb-1">3D / AR Preview</h4>
+                <p className="text-white/70 text-[10px] font-bold">Visualize quantity on your table</p>
+              </div>
+            </div>
+            <Maximize2 size={24} className="text-white/50 group-hover:text-white transition-colors relative z-10" />
+          </button>
+        </div>
+
         {/* Quantity and Add to Cart */}
         <div className="pt-4 flex items-center gap-4">
           <div className="flex items-center bg-[#F8F8F8] rounded-[20px] p-1.5 border border-gray-100 shadow-inner">
@@ -285,6 +306,57 @@ export function ItemDetailPage() {
         )}
       </motion.div>
 
+      {/* AR Modal Placeholder */}
+      <AnimatePresence>
+        {showAR && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black flex flex-col"
+          >
+            <div className="p-6 flex items-center justify-between relative z-10">
+              <button onClick={() => setShowAR(false)} className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white backdrop-blur-md">
+                <ChevronLeft />
+              </button>
+              <h3 className="text-white font-black uppercase tracking-[0.3em] text-xs">Neural AR Visualization</h3>
+              <div className="w-10" />
+            </div>
+            
+            <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+               <motion.div 
+                animate={{ 
+                  scale: [1, 1.05, 1],
+                  rotate: [0, 5, -5, 0]
+                }}
+                transition={{ duration: 10, repeat: Infinity }}
+                className="w-full aspect-square max-w-sm relative z-10"
+               >
+                 <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain filter drop-shadow-[0_35px_35px_rgba(255,107,0,0.3)]" />
+               </motion.div>
+               
+               {/* Scanning Effect */}
+               <motion.div 
+                animate={{ top: ['0%', '100%', '0%'] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="absolute left-0 right-0 h-0.5 bg-[#FF6B00] shadow-[0_0_15px_#FF6B00] z-20"
+               />
+
+               <div className="absolute inset-0 bg-[#FF6B00]/5 animate-pulse" />
+            </div>
+
+            <div className="p-8 space-y-6 bg-black">
+              <div className="space-y-2 text-center text-white">
+                <h4 className="text-2xl font-black font-display tracking-tight">System Ready</h4>
+                <p className="text-gray-400 text-sm font-medium">Point your camera at a flat surface to project the {item.name}.</p>
+              </div>
+              <button className="w-full py-5 bg-white text-black rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl shadow-white/10 active:scale-95 transition-all">
+                Enable Camera Access
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <style>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

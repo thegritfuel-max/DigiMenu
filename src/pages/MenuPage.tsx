@@ -6,7 +6,7 @@ import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { Restaurant, Category, MenuItem, Banner, OperationType } from '../types';
 import { handleFirestoreError } from '../lib/dbService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, ShoppingCart, User, ChevronRight, Star, Clock, Info, Flame, ChevronLeft } from 'lucide-react';
+import { Search, ShoppingCart, User, ChevronRight, Star, Clock, Info, Flame, ChevronLeft, Settings, Tag, Home } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
@@ -141,6 +141,7 @@ export function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'menu' | 'profile' | 'offers' | 'cart'>('menu');
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -245,220 +246,343 @@ export function MenuPage() {
 
       {/* Main Content */}
       <main className="px-4 py-4 space-y-6">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Search for dishes, cafes..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-gray-100 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-[#FF6B00] shadow-sm transition-all outline-none text-[#111111]"
-          />
-        </div>
-
-        {/* Banners - Auto Sliding */}
-        {banners.length > 0 && (
-          <div className="relative overflow-hidden -mx-4">
-            <motion.div 
-              className="flex gap-4 px-4"
-              animate={{
-                x: [0, -100 * banners.length + "%"],
-              }}
-              transition={{
-                duration: 20 * banners.length,
-                repeat: Infinity,
-                ease: "linear"
-              }}
-            >
-              {[...banners, ...banners].map((banner, index) => (
-                <div 
-                  key={`${banner.id}-${index}`}
-                  className="relative min-w-[85vw] aspect-[16/9] rounded-[24px] overflow-hidden bg-gray-200 shadow-md"
-                >
-                  <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-6 flex flex-col justify-end">
-                    <h3 className="text-white font-bold text-xl font-display">{banner.title}</h3>
-                    <p className="text-white/80 text-sm">{banner.subtitle}</p>
-                  </div>
-                </div>
-              ))}
-            </motion.div>
-          </div>
-        )}
-
-        {/* Categories */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold font-display">Categories</h2>
-            <button className="text-[#FF6B00] text-sm font-bold flex items-center">
-              See all <ChevronRight size={16} />
-            </button>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 hide-scrollbar">
-            <button 
-              onClick={() => setActiveCategory('all')}
-              className={cn(
-                "flex flex-col items-center gap-2 min-w-[72px] transition-all",
-                activeCategory === 'all' ? "scale-105" : "opacity-60"
-              )}
-            >
-              <div className={cn(
-                "w-14 h-14 rounded-[20px] flex items-center justify-center bg-white transition-colors border border-gray-100 shadow-sm",
-                activeCategory === 'all' && "bg-[#111111] text-white shadow-lg"
-              )}>
-                <Flame size={24} />
-              </div>
-              <span className="text-[11px] font-bold">Popular</span>
-            </button>
-            {categories.map((cat) => (
-              <button 
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={cn(
-                  "flex flex-col items-center gap-2 min-w-[72px] transition-all",
-                  activeCategory === cat.id ? "scale-105" : "opacity-60"
-                )}
-              >
-                <div className={cn(
-                  "w-14 h-14 rounded-[20px] overflow-hidden bg-white transition-all shadow-sm border border-gray-100",
-                  activeCategory === cat.id && "ring-2 ring-[#FF6B00] ring-offset-2"
-                )}>
-                  <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
-                </div>
-                <span className="text-[11px] font-bold">{cat.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Trending Section */}
-        {menuItems.some(i => i.isTrending) && activeCategory === 'all' && !searchQuery && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold font-display">Trending Now</h2>
-              <div className="bg-[#FF6B00]/10 text-[#FF6B00] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Hot 🔥</div>
+        {activeTab === 'menu' && (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Search for dishes, cafes..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white border border-gray-100 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-[#FF6B00] shadow-sm transition-all outline-none text-[#111111]"
+              />
             </div>
-            <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 hide-scrollbar snap-x">
-              {menuItems.filter(i => i.isTrending).map((item) => (
+
+            {/* Banners - Auto Sliding */}
+            {banners.length > 0 && (
+              <div className="relative overflow-hidden -mx-4">
                 <motion.div 
-                  key={item.id}
-                  className="min-w-[200px] bg-white rounded-[28px] overflow-hidden shadow-xl border border-gray-100 snap-center"
-                  whileTap={{ scale: 0.95 }}
+                  className="flex gap-4 px-4"
+                  animate={{
+                    x: [0, -100 * banners.length + "%"],
+                  }}
+                  transition={{
+                    duration: 20 * banners.length,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
                 >
-                  <Link to={`/${restaurantId}/item/${item.id}`}>
-                    <div className="aspect-square relative">
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                  {[...banners, ...banners].map((banner, index) => (
+                    <div 
+                      key={`${banner.id}-${index}`}
+                      className="relative min-w-[85vw] aspect-[16/9] rounded-[24px] overflow-hidden bg-gray-200 shadow-md"
+                    >
+                      <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-6 flex flex-col justify-end">
+                        <h3 className="text-white font-bold text-xl font-display">{banner.title}</h3>
+                        <p className="text-white/80 text-sm">{banner.subtitle}</p>
+                      </div>
                     </div>
-                    <div className="p-4 space-y-1">
-                      <h4 className="font-bold text-sm truncate">{item.name}</h4>
-                      <p className="text-[#FF6B00] font-black text-xs">₹{item.price}</p>
-                    </div>
-                  </Link>
+                  ))}
                 </motion.div>
-              ))}
+              </div>
+            )}
+
+            {/* Categories */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold font-display">Categories</h2>
+                <button className="text-[#FF6B00] text-sm font-bold flex items-center">
+                  See all <ChevronRight size={16} />
+                </button>
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 hide-scrollbar">
+                <button 
+                  onClick={() => setActiveCategory('all')}
+                  className={cn(
+                    "flex flex-col items-center gap-2 min-w-[72px] transition-all",
+                    activeCategory === 'all' ? "scale-105" : "opacity-60"
+                  )}
+                >
+                  <div className={cn(
+                    "w-14 h-14 rounded-[20px] flex items-center justify-center bg-white transition-colors border border-gray-100 shadow-sm",
+                    activeCategory === 'all' && "bg-[#111111] text-white shadow-lg"
+                  )}>
+                    <Flame size={24} />
+                  </div>
+                  <span className="text-[11px] font-bold">Popular</span>
+                </button>
+                {categories.map((cat) => (
+                  <button 
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={cn(
+                      "flex flex-col items-center gap-2 min-w-[72px] transition-all",
+                      activeCategory === cat.id ? "scale-105" : "opacity-60"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-14 h-14 rounded-[20px] overflow-hidden bg-white transition-all shadow-sm border border-gray-100",
+                      activeCategory === cat.id && "ring-2 ring-[#FF6B00] ring-offset-2"
+                    )}>
+                      <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
+                    </div>
+                    <span className="text-[11px] font-bold">{cat.name}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </section>
+
+            {/* Trending Section */}
+            {menuItems.some(i => i.isTrending) && activeCategory === 'all' && !searchQuery && (
+              <section className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold font-display">Trending Now</h2>
+                  <div className="bg-[#FF6B00]/10 text-[#FF6B00] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Hot 🔥</div>
+                </div>
+                <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 hide-scrollbar snap-x">
+                  {menuItems.filter(i => i.isTrending).map((item) => (
+                    <motion.div 
+                      key={item.id}
+                      className="min-w-[200px] bg-white rounded-[28px] overflow-hidden shadow-xl border border-gray-100 snap-center"
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Link to={`/${restaurantId}/item/${item.id}`}>
+                        <div className="aspect-square relative">
+                          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="p-4 space-y-1">
+                          <h4 className="font-bold text-sm truncate">{item.name}</h4>
+                          <p className="text-[#FF6B00] font-black text-xs">₹{item.price}</p>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Menu Items */}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold font-display tracking-tight text-[#111]">Artisanal Selections</h2>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#FF6B00] animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#FF6B00]">Live Inventory</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <AnimatePresence mode="popLayout">
+                  {filteredItems.map((item) => (
+                    <motion.div 
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      whileHover={{ y: -4, scale: 1.01, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
+                      className="bg-white rounded-[24px] p-4 flex gap-4 transition-all border border-gray-100 shadow-sm overflow-hidden"
+                    >
+                      <div className="relative w-28 h-28 rounded-[16px] overflow-hidden flex-shrink-0 bg-gray-100">
+                        <FoodCardGallery 
+                          images={item.images || (item.imageUrl ? [item.imageUrl] : [])} 
+                          name={item.name} 
+                          restaurantId={restaurantId!} 
+                          itemId={item.id} 
+                        />
+                        {item.isBestseller && (
+                          <div className="absolute top-2 left-2 bg-[#FF6B00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest">
+                            Bestseller
+                          </div>
+                        )}
+                      </div>
+                      <Link to={`/${restaurantId}/item/${item.id}`} className="flex-1 flex flex-col justify-between py-1">
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <div className={cn(
+                              "w-3 h-3 rounded-sm border flex items-center justify-center p-0.5",
+                              item.isVeg ? "border-green-600" : "border-red-600"
+                            )}>
+                              <div className={cn(
+                                "w-full h-full rounded-full",
+                                item.isVeg ? "bg-green-600" : "bg-red-600"
+                              )} />
+                            </div>
+                            <h3 className="font-bold text-base leading-tight font-display">{item.name}</h3>
+                          </div>
+                          <p className="text-[11px] text-gray-500 line-clamp-2 mb-2 leading-relaxed">{item.description}</p>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
+                              <Star size={12} className="fill-[#FF6B00] text-[#FF6B00]" /> {item.rating || 4.5}
+                            </span>
+                            <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
+                              <Clock size={12} /> 15-20 min
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="font-black text-lg text-[#111] font-display">₹{item.price}</span>
+                          <button 
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); /* handle add to cart */ }}
+                            className="bg-[#FF6B00] text-white px-5 py-2 rounded-[12px] text-xs font-black shadow-lg shadow-[#FF6B00]/20 active:scale-95 transition-all"
+                          >
+                            ADD
+                          </button>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+            {/* Intelligent Review Section */}
+            {restaurant.googleReviewLink && (
+              <ReviewPrompt googleLink={restaurant.googleReviewLink} />
+            )}
+          </div>
         )}
 
-        {/* Menu Items */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold font-display tracking-tight text-[#111]">Artisanal Selections</h2>
-            <div className="flex items-center gap-2">
-               <div className="w-2 h-2 rounded-full bg-[#FF6B00] animate-pulse" />
-               <span className="text-[10px] font-black uppercase tracking-widest text-[#FF6B00]">Live Inventory</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <AnimatePresence mode="popLayout">
-              {filteredItems.map((item) => (
-                <motion.div 
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  whileHover={{ y: -4, scale: 1.01, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
-                  className="bg-white rounded-[24px] p-4 flex gap-4 transition-all border border-gray-100 shadow-sm overflow-hidden"
-                >
-                  <div className="relative w-28 h-28 rounded-[16px] overflow-hidden flex-shrink-0 bg-gray-100">
-                    <FoodCardGallery 
-                      images={item.images || (item.imageUrl ? [item.imageUrl] : [])} 
-                      name={item.name} 
-                      restaurantId={restaurantId!} 
-                      itemId={item.id} 
-                    />
-                    {item.isBestseller && (
-                      <div className="absolute top-2 left-2 bg-[#FF6B00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest">
-                        Bestseller
-                      </div>
-                    )}
-                  </div>
-                  <Link to={`/${restaurantId}/item/${item.id}`} className="flex-1 flex flex-col justify-between py-1">
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <div className={cn(
-                          "w-3 h-3 rounded-sm border flex items-center justify-center p-0.5",
-                          item.isVeg ? "border-green-600" : "border-red-600"
-                        )}>
-                          <div className={cn(
-                            "w-full h-full rounded-full",
-                            item.isVeg ? "bg-green-600" : "bg-red-600"
-                          )} />
-                        </div>
-                        <h3 className="font-bold text-base leading-tight font-display">{item.name}</h3>
-                      </div>
-                      <p className="text-[11px] text-gray-500 line-clamp-2 mb-2 leading-relaxed">{item.description}</p>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
-                          <Star size={12} className="fill-[#FF6B00] text-[#FF6B00]" /> {item.rating || 4.5}
-                        </span>
-                        <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
-                          <Clock size={12} /> 15-20 min
-                        </span>
+        {/* Offers Tab */}
+        {activeTab === 'offers' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <header className="space-y-2">
+              <h1 className="text-3xl font-black font-display text-[#111]">Exclusive Node Rewards</h1>
+              <p className="text-gray-500 font-medium">Hyper-personalized offers for your current session.</p>
+            </header>
+
+            <div className="grid gap-6">
+              {[
+                { title: 'Neural First Order', discount: '₹150 OFF', code: 'SCALORA150', color: 'bg-black text-white' },
+                { title: 'Social Proof Reward', discount: 'Free Dessert', code: 'REVIEW_LAB', color: 'bg-[#FF6B00] text-white' },
+                { title: 'Coastal Selection', discount: '20% Special', code: 'MAFIA20', color: 'bg-white border border-gray-100 text-[#111]' }
+              ].map((offer, i) => (
+                <div key={i} className={cn("p-8 rounded-[40px] relative overflow-hidden group shadow-lg", offer.color)}>
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8" />
+                  <div className="relative z-10 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-50">Active Payload</span>
+                      <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                        <Tag size={14} />
                       </div>
                     </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="font-black text-lg text-[#111] font-display">₹{item.price}</span>
-                      <button 
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); /* handle add to cart */ }}
-                        className="bg-[#FF6B00] text-white px-5 py-2 rounded-[12px] text-xs font-black shadow-lg shadow-[#FF6B00]/20 active:scale-95 transition-all"
-                      >
-                        ADD
+                    <div>
+                      <h3 className="text-3xl font-black font-display leading-tight">{offer.discount}</h3>
+                      <p className="font-bold opacity-70 uppercase tracking-widest text-[10px]">{offer.title}</p>
+                    </div>
+                    <div className="pt-4 flex items-center justify-between border-t border-current border-opacity-10">
+                      <code className="text-xs font-black tracking-[0.2em]">{offer.code}</code>
+                      <button className="px-5 py-2 rounded-full border border-current border-opacity-30 text-[10px] font-black uppercase tracking-widest hover:bg-current hover:text-inherit transition-all">
+                        Apply Node
                       </button>
                     </div>
-                  </Link>
-                </motion.div>
+                  </div>
+                </div>
               ))}
-            </AnimatePresence>
+            </div>
           </div>
-        </div>
-        {/* Intelligent Review Section */}
-        {restaurant.googleReviewLink && (
-          <ReviewPrompt googleLink={restaurant.googleReviewLink} />
+        )}
+
+        {activeTab === 'profile' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
+            <header className="space-y-2">
+              <h1 className="text-3xl font-black font-display text-[#111]">Laboratory</h1>
+              <p className="text-gray-500 font-medium">System configuration and neural controls.</p>
+            </header>
+
+            <div className="space-y-4">
+              <Link 
+                to="/admin" 
+                className="flex items-center justify-between p-6 bg-[#111] text-white rounded-[32px] shadow-2xl group hover:scale-[1.02] transition-all"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                    <Settings className="text-[#FF6B00]" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-lg">Admin Dashboard</h3>
+                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Operation Override</p>
+                  </div>
+                </div>
+                <ChevronRight className="text-gray-500 group-hover:text-white transition-colors" />
+              </Link>
+
+              <div className="p-8 bg-white border border-gray-100 rounded-[40px] space-y-6 shadow-sm">
+                <h3 className="font-black text-xs uppercase tracking-[0.2em] text-gray-400">Environment Controls</h3>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-800">Hyper-Speed Browsing</span>
+                    <div className="w-12 h-6 bg-[#FF6B00] rounded-full relative">
+                      <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-800">Neural Recommendations</span>
+                    <div className="w-12 h-6 bg-[#FF6B00] rounded-full relative">
+                      <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-800">AR Food Visualization</span>
+                    <div className="w-12 h-6 bg-gray-200 rounded-full relative">
+                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => auth.signOut()}
+                className="w-full p-6 text-red-500 font-black uppercase tracking-widest text-xs hover:bg-red-50 rounded-[28px] transition-colors"
+              >
+                Terminate Session
+              </button>
+            </div>
+          </div>
         )}
       </main>
 
       {/* Floating Bottom Nav */}
       <footer className="fixed bottom-6 left-6 right-6 z-50">
         <div className="bg-white/80 backdrop-blur-xl border border-white/50 text-[#111] rounded-full p-2 flex items-center justify-around shadow-2xl shadow-black/5">
-          <Link to={`/${restaurantId}`} className="flex flex-col items-center gap-1 px-4 py-2 bg-[#111] text-white rounded-full">
-            <Search size={18} />
+          <button 
+            onClick={() => setActiveTab('menu')}
+            className={cn(
+              "flex flex-col items-center gap-1 px-4 py-2 rounded-full transition-all duration-300",
+              activeTab === 'menu' ? "bg-[#111] text-white" : "text-gray-400"
+            )}
+          >
+            <Home size={18} />
             <span className="text-[9px] font-black uppercase">Home</span>
-          </Link>
-          <Link to={`/${restaurantId}`} className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400">
+          </button>
+          <button 
+            onClick={() => setActiveTab('offers')}
+            className={cn(
+              "flex flex-col items-center gap-1 px-4 py-2 rounded-full transition-all duration-300",
+              activeTab === 'offers' ? "bg-[#111] text-white" : "text-gray-400"
+            )}
+          >
             <Info size={18} />
             <span className="text-[9px] font-black uppercase">Offers</span>
-          </Link>
-          <Link to={`/${restaurantId}/cart`} className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400">
+          </button>
+          <button 
+            onClick={() => navigate(`/${restaurantId}/cart`)}
+            className="flex flex-col items-center gap-1 px-4 py-2 text-gray-400"
+          >
             <ShoppingCart size={18} />
             <span className="text-[9px] font-black uppercase">Cart</span>
-          </Link>
-          <Link to={`/${restaurantId}`} className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400">
+          </button>
+          <button 
+            onClick={() => setActiveTab('profile')}
+            className={cn(
+              "flex flex-col items-center gap-1 px-4 py-2 rounded-full transition-all duration-300",
+              activeTab === 'profile' ? "bg-[#111] text-white" : "text-gray-400"
+            )}
+          >
             <User size={18} />
             <span className="text-[9px] font-black uppercase">Profile</span>
-          </Link>
+          </button>
         </div>
       </footer>
 
