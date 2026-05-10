@@ -1,0 +1,6 @@
+{
+  "name": "Scalora Labs - Smart QR Menu",
+  "description": "Premium mobile-first restaurant QR menu platform with AR food visualization, smart Google reviews, and real-time order tracking.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": []
+}

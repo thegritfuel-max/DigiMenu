@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(restaurantData) {
+      return isSignedIn() && request.auth.uid in restaurantData.adminUids;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Restaurant Rules ---
+    match /restaurants/{restaurantId} {
+      allow read: if isValidId(restaurantId);
+      allow create: if isSignedIn() && isValidRestaurant(incoming()) && incoming().adminUids.size() > 0 && request.auth.uid in incoming().adminUids;
+      allow update: if isOwner(existing()) && isValidRestaurant(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'logoUrl', 'primaryColor', 'accentColor', 'googleReviewLink', 'suggestedReviews', 'adminUids'])
+      );
+      allow delete: if false; // Restaurants shouldn't be easily deleted
+
+      function isValidRestaurant(data) {
+        return data.name is string && data.name.size() > 0 && data.name.size() < 100
+            && data.primaryColor is string && data.primaryColor.matches('^#[0-9a-fA-F]{6}$')
+            && (data.logoUrl == null || (data.logoUrl is string && data.logoUrl.size() < 500))
+            && (data.adminUids is list);
+      }
+
+      // --- Sub-collections ---
+      match /categories/{categoryId} {
+        allow read: if isValidId(restaurantId);
+        allow write: if isOwner(get(/databases/$(database)/documents/restaurants/$(restaurantId)).data);
+      }
+
+      match /menu_items/{itemId} {
+        allow read: if isValidId(restaurantId);
+        allow write: if isOwner(get(/databases/$(database)/documents/restaurants/$(restaurantId)).data);
+      }
+
+      match /banners/{bannerId} {
+        allow read: if isValidId(restaurantId);
+        allow write: if isOwner(get(/databases/$(database)/documents/restaurants/$(restaurantId)).data);
+      }
+
+      match /orders/{orderId} {
+        allow read: if isOwner(get(/databases/$(database)/documents/restaurants/$(restaurantId)).data) 
+                    || (isSignedIn() && existing().customerId == request.auth.uid);
+        allow create: if isValidOrder(incoming()) && (incoming().customerId == request.auth.uid || !('customerId' in incoming()));
+        allow update: if isOwner(get(/databases/$(database)/documents/restaurants/$(restaurantId)).data) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['status'])
+        );
+
+        function isValidOrder(data) {
+          return data.tableNumber is string && data.tableNumber.size() > 0
+              && data.items is list && data.items.size() > 0
+              && data.totalAmount is number && data.totalAmount >= 0
+              && data.status in ['pending', 'preparing', 'completed'];
+        }
+      }
+    }
+  }
+}

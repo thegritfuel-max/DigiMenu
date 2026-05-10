@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "Restaurant": {
+      "title": "Restaurant",
+      "description": "Information about the restaurant",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "primaryColor": { "type": "string", "description": "Hex color code" },
+        "accentColor": { "type": "string", "description": "Hex color code" },
+        "googleReviewLink": { "type": "string" },
+        "suggestedReviews": { "type": "array", "items": { "type": "string" } },
+        "adminUids": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["name", "primaryColor"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Food category",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["name"]
+    },
+    "MenuItem": {
+      "title": "MenuItem",
+      "description": "Food item details",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "arModelUrl": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "isVeg": { "type": "boolean" },
+        "isBestseller": { "type": "boolean" },
+        "rating": { "type": "number" },
+        "calories": { "type": "number" },
+        "preparationTime": { "type": "number" },
+        "ingredients": { "type": "array", "items": { "type": "string" } },
+        "recommendations": { "type": "array", "items": { "type": "string" }, "description": "IDs of menu items" }
+      },
+      "required": ["name", "price", "categoryId"]
+    },
+    "Banner": {
+      "title": "Banner",
+      "description": "Offer banners for the hero section",
+      "type": "object",
+      "properties": {
+        "imageUrl": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "ctaLink": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["imageUrl"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order",
+      "type": "object",
+      "properties": {
+        "tableNumber": { "type": "string" },
+        "items": { 
+          "type": "array", 
+          "items": { 
+            "type": "object", 
+            "properties": {
+              "itemId": { "type": "string" },
+              "name": { "type": "string" },
+              "quantity": { "type": "number" },
+              "price": { "type": "number" }
+            }
+          } 
+        },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "preparing", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["tableNumber", "items", "totalAmount", "status"]
+    }
+  },
+  "firestore": {
+    "/restaurants/{restaurantId}": {
+      "schema": "Restaurant",
+      "description": "Root restaurant data"
+    },
+    "/restaurants/{restaurantId}/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Categories for menu"
+    },
+    "/restaurants/{restaurantId}/menu_items/{itemId}": {
+      "schema": "MenuItem",
+      "description": "Food menu items"
+    },
+    "/restaurants/{restaurantId}/banners/{bannerId}": {
+      "schema": "Banner",
+      "description": "Promotional banners"
+    },
+    "/restaurants/{restaurantId}/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Live orders"
+    }
+  }
+}
