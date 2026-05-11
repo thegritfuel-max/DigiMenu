@@ -42,11 +42,7 @@ export function AdminPage() {
   };
 
   const isAdmin = restaurant && (
-    (
-      (!restaurant.adminUids || restaurant.adminUids.length === 0) && 
-      (!restaurant.adminEmails || (restaurant.adminEmails as any).length === 0)
-    ) || 
-    restaurant.adminUids?.includes(user?.uid || '') ||
+    (!restaurant.adminEmails || (restaurant.adminEmails as any).length === 0) || 
     (user?.email && restaurant.adminEmails?.includes(user.email))
   );
   const primaryColor = restaurant?.primaryColor || '#ea580c'; // default orange-600
@@ -97,23 +93,12 @@ export function AdminPage() {
                 </div>
                 <div className="space-y-2 relative">
                   <p className="text-red-600 text-[10px] font-black uppercase tracking-[0.3em]">Clearance Denied</p>
-                  <p className="text-red-900 font-bold text-sm">Neural identity {user.email} is not authorized for this node.</p>
+                  <p className="text-red-900 font-bold text-sm">Email {user.email} is not authorized for this node.</p>
                 </div>
                 
                 <div className="pt-4 space-y-4">
                   <div className="space-y-2">
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-left">Your Neural CID (UID):</p>
-                    <div className="flex items-center gap-3 bg-white p-4 rounded-2xl border border-red-100 shadow-inner">
-                      <code className="flex-1 text-[10px] font-mono font-bold text-gray-600 break-all text-left">{user.uid}</code>
-                      <button 
-                        onClick={() => { navigator.clipboard.writeText(user.uid); alert('UID Copied'); }}
-                        className="bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-200"
-                      >Copy</button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-left">Your Email:</p>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-left">Your Authorized Email:</p>
                     <div className="flex items-center gap-3 bg-white p-4 rounded-2xl border border-red-100 shadow-inner">
                       <code className="flex-1 text-[10px] font-mono font-bold text-gray-600 break-all text-left">{user.email}</code>
                       <button 
@@ -122,7 +107,7 @@ export function AdminPage() {
                       >Copy</button>
                     </div>
                   </div>
-                  <p className="text-[9px] text-gray-400 italic">Provide your UID or Email to an existing Master Admin to grant access via Settings.</p>
+                  <p className="text-[9px] text-gray-400 italic">Provide this email to an existing admin to grant access via Settings.</p>
                 </div>
              </div>
 
@@ -479,125 +464,58 @@ function AdminSettings({ user }: { user: FirebaseUser }) {
             </div>
           </div>
 
-          <div className="pt-6 border-t border-gray-100 space-y-8">
-            <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block mb-4">Authorized Admin Clearance</label>
+          <div className="pt-6 border-t border-gray-100 space-y-8 text-left">
+            <header className="space-y-1">
+              <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block">Authorized Admin Clearance</label>
+              <p className="text-[9px] text-gray-400 italic">Only emails listed below can access this dashboard via Google Sign-In.</p>
+            </header>
             
-            {/* UID Clearance */}
+            {/* Email Clearance */}
             <div className="space-y-4">
-              <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100 space-y-2">
-                <p className="text-[10px] font-black uppercase text-orange-600">Your Neural Identity (UID)</p>
-                <div className="flex items-center justify-between gap-4">
-                  <code className="text-xs font-mono font-bold text-orange-900 break-all">{user?.uid}</code>
+              <div className="space-y-2 text-left">
+                {(restaurant.adminEmails || []).map((email, index) => (
+                  <div key={index} className="flex items-center gap-3 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100">
+                    <MessageCircle size={14} className="text-gray-400" />
+                    <span className="flex-1 text-[10px] font-bold truncate">{email}</span>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const newEmails = [...(restaurant.adminEmails || [])];
+                        newEmails.splice(index, 1);
+                        setRestaurant({...restaurant, adminEmails: newEmails});
+                      }}
+                      className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                
+                <div className="flex gap-2">
+                  <input 
+                    type="email" 
+                    id="newAdminEmail"
+                    placeholder="Enter administrator email..."
+                    className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:ring-2 focus:ring-orange-500 outline-none text-[10px] font-medium"
+                  />
                   <button 
                     type="button"
                     onClick={() => {
-                      navigator.clipboard.writeText(user?.uid || '');
-                      alert('UID copied to clipboard');
+                      const input = document.getElementById('newAdminEmail') as HTMLInputElement;
+                      if (input.value && !restaurant.adminEmails?.includes(input.value)) {
+                        setRestaurant({
+                          ...restaurant, 
+                          adminEmails: [...(restaurant.adminEmails || []), input.value]
+                        });
+                        input.value = '';
+                      }
                     }}
-                    className="flex-shrink-0 bg-white text-orange-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm active:scale-95 transition-all"
+                    className="bg-black text-white px-4 rounded-xl font-bold text-[10px]"
                   >
-                    Copy
+                    Add Admin
                   </button>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <p className="text-[10px] font-black uppercase text-gray-400">Authorized UIDs</p>
-                <div className="space-y-2 text-left">
-                  {(restaurant.adminUids || []).map((uid, index) => (
-                    <div key={index} className="flex items-center gap-3 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100">
-                      <Lock size={14} className="text-gray-400" />
-                      <span className="flex-1 text-[10px] font-mono font-bold truncate">{uid}</span>
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          const newUids = [...(restaurant.adminUids || [])];
-                          newUids.splice(index, 1);
-                          setRestaurant({...restaurant, adminUids: newUids});
-                        }}
-                        className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
-                  <div className="flex gap-2">
-                    <input 
-                      type="text" 
-                      id="newAdminUid"
-                      placeholder="Paste Google User UID here..."
-                      className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:ring-2 focus:ring-orange-500 outline-none text-[10px] font-mono"
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => {
-                        const input = document.getElementById('newAdminUid') as HTMLInputElement;
-                        if (input.value && !restaurant.adminUids?.includes(input.value)) {
-                          setRestaurant({
-                            ...restaurant, 
-                            adminUids: [...(restaurant.adminUids || []), input.value]
-                          });
-                          input.value = '';
-                        }
-                      }}
-                      className="bg-black text-white px-4 rounded-xl font-bold text-[10px]"
-                    >
-                      Add UID
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Email Clearance */}
-            <div className="space-y-4 pt-4 border-t border-dashed border-gray-100">
-              <div className="space-y-2">
-                <p className="text-[10px] font-black uppercase text-gray-400">Authorized Emails</p>
-                <div className="space-y-2 text-left">
-                  {(restaurant.adminEmails || []).map((email, index) => (
-                    <div key={index} className="flex items-center gap-3 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100">
-                      <MessageCircle size={14} className="text-gray-400" />
-                      <span className="flex-1 text-[10px] font-bold truncate">{email}</span>
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          const newEmails = [...(restaurant.adminEmails || [])];
-                          newEmails.splice(index, 1);
-                          setRestaurant({...restaurant, adminEmails: newEmails});
-                        }}
-                        className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
-                  <div className="flex gap-2">
-                    <input 
-                      type="email" 
-                      id="newAdminEmail"
-                      placeholder="Enter administrator email..."
-                      className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:ring-2 focus:ring-orange-500 outline-none text-[10px] font-medium"
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => {
-                        const input = document.getElementById('newAdminEmail') as HTMLInputElement;
-                        if (input.value && !restaurant.adminEmails?.includes(input.value)) {
-                          setRestaurant({
-                            ...restaurant, 
-                            adminEmails: [...(restaurant.adminEmails || []), input.value]
-                          });
-                          input.value = '';
-                        }
-                      }}
-                      className="bg-black text-white px-4 rounded-xl font-bold text-[10px]"
-                    >
-                      Authorize Email
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <p className="text-[9px] text-gray-400 italic">Emails are easier to manage and verify. Use this to grant access to multiple colleagues.</p>
             </div>
           </div>
 

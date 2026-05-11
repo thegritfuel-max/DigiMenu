@@ -462,11 +462,7 @@ export function MenuPage() {
   const t = translations[language];
 
   const userIsAdmin = user && restaurant && (
-    (
-      (!restaurant.adminUids || restaurant.adminUids.length === 0) && 
-      (!restaurant.adminEmails || (restaurant.adminEmails as any).length === 0)
-    ) || 
-    restaurant.adminUids?.includes(user.uid) ||
+    (!restaurant.adminEmails || (restaurant.adminEmails as any).length === 0) || 
     (user.email && restaurant.adminEmails?.includes(user.email))
   );
 
@@ -930,26 +926,19 @@ export function MenuPage() {
                           <Lock size={24} />
                           <div>
                             <h3 className="font-black text-lg">Access Prohibited</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Neural ID: {user.uid.slice(0, 8)}...</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Email Restricted</p>
                           </div>
                        </div>
                        <p className="text-xs font-medium text-red-500 leading-relaxed">
-                          Your account does not have admin clearance for this lab. Request authorization from an existing administrator or check your login.
+                          Your account does not have admin clearance. Request authorization for your email address from an existing administrator.
                        </p>
                        <div className="space-y-2">
-                         <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-red-100">
-                            <code className="flex-1 text-[10px] font-mono font-bold text-gray-500 break-all">{user.uid}</code>
-                            <button 
-                              onClick={() => { navigator.clipboard.writeText(user.uid); alert('UID Copied'); }}
-                              className="bg-red-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase"
-                            >UID</button>
-                         </div>
                          <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-red-100">
                             <code className="flex-1 text-[10px] font-mono font-bold text-gray-500 break-all">{user.email}</code>
                             <button 
                               onClick={() => { navigator.clipboard.writeText(user.email || ''); alert('Email Copied'); }}
                               className="bg-red-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase"
-                            >Email</button>
+                            >Copy Email</button>
                          </div>
                        </div>
                     </div>
