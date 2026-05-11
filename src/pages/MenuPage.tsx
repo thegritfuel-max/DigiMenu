@@ -95,9 +95,9 @@ function ReviewSection({ restaurant, primaryColor }: { restaurant: Restaurant, p
             <div className="bg-gray-50 rounded-3xl p-6 relative border border-gray-100 group">
               {generating ? (
                 <div className="flex items-center gap-3 py-2">
-                   <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" />
-                   <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                   <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                   <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: primaryColor }} />
+                   <div className="w-2 h-2 rounded-full animate-bounce [animation-delay:-0.15s]" style={{ backgroundColor: primaryColor }} />
+                   <div className="w-2 h-2 rounded-full animate-bounce [animation-delay:-0.3s]" style={{ backgroundColor: primaryColor }} />
                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Neural Synthesis...</span>
                 </div>
               ) : (
@@ -227,7 +227,7 @@ const playClick = () => {
   audio.play().catch(() => {}); // Ignore silent errors
 };
 
-function SplashScreen({ restaurant }: { restaurant: Restaurant }) {
+function SplashScreen({ restaurant, primaryColor }: { restaurant: Restaurant, primaryColor: string }) {
   useEffect(() => {
     const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
     audio.volume = 0.3;
@@ -267,9 +267,9 @@ function SplashScreen({ restaurant }: { restaurant: Restaurant }) {
         </motion.p>
       </div>
       <div className="absolute bottom-12 flex gap-2">
-        <div className="w-2 h-2 rounded-full bg-black/10 animate-bounce" style={{ animationDelay: '0s' }} />
-        <div className="w-2 h-2 rounded-full bg-black/10 animate-bounce" style={{ animationDelay: '0.2s' }} />
-        <div className="w-2 h-2 rounded-full bg-black/10 animate-bounce" style={{ animationDelay: '0.4s' }} />
+        <div className="w-2 h-2 rounded-full animate-bounce" style={{ animationDelay: '0s', backgroundColor: primaryColor }} />
+        <div className="w-2 h-2 rounded-full animate-bounce" style={{ animationDelay: '0.2s', backgroundColor: primaryColor }} />
+        <div className="w-2 h-2 rounded-full animate-bounce" style={{ animationDelay: '0.4s', backgroundColor: primaryColor }} />
       </div>
     </motion.div>
   );
@@ -461,9 +461,10 @@ export function MenuPage() {
   const primaryColor = restaurant?.primaryColor || '#FF6B00';
   const t = translations[language];
 
-  const userIsAdmin = user && restaurant && (
+  const userIsAdmin = restaurant && (
     (!restaurant.adminEmails || (restaurant.adminEmails as any).length === 0) || 
-    (user.email && restaurant.adminEmails?.includes(user.email))
+    (user?.email && restaurant.adminEmails?.includes(user.email)) ||
+    (localStorage.getItem('admin_session') && restaurant.adminCredentials?.some(c => c.email === JSON.parse(localStorage.getItem('admin_session')!).email))
   );
 
   if (loading || !isLoaded) {
@@ -497,7 +498,7 @@ export function MenuPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7] pb-24 select-none">
       <AnimatePresence>
-        {showSplash && <SplashScreen restaurant={restaurant} />}
+        {showSplash && <SplashScreen restaurant={restaurant} primaryColor={primaryColor} />}
       </AnimatePresence>
 
       {/* Header */}
@@ -507,7 +508,7 @@ export function MenuPage() {
             {restaurant.logoUrl ? (
               <img src={restaurant.logoUrl} alt={restaurant.name} className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center font-bold text-[#FF6B00]">
+              <div className="w-full h-full flex items-center justify-center font-bold" style={{ color: primaryColor }}>
                 {restaurant.name.charAt(0)}
               </div>
             )}
@@ -594,7 +595,7 @@ export function MenuPage() {
                           >
                             <img src={item.imageUrl} className="w-10 h-10 rounded-xl object-cover" />
                             <div className="flex-1">
-                              <h4 className="font-bold text-sm group-hover:text-[#FF6B00] transition-colors">{item.name}</h4>
+                              <h4 className="font-bold text-sm transition-colors" style={{ color: searchQuery ? primaryColor : undefined }}>{item.name}</h4>
                               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">₹{item.price}</p>
                             </div>
                             <ChevronRight size={14} className="text-gray-300" />
@@ -669,7 +670,7 @@ export function MenuPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold font-display">{t.categories}</h2>
-                <button onClick={playClick} className="text-[#FF6B00] text-sm font-bold flex items-center">
+                <button onClick={playClick} className="text-sm font-bold flex items-center" style={{ color: primaryColor }}>
                   {t.seeAll} <ChevronRight size={16} />
                 </button>
               </div>
@@ -700,8 +701,10 @@ export function MenuPage() {
                   >
                     <div className={cn(
                       "w-14 h-14 rounded-[20px] overflow-hidden bg-white transition-all shadow-sm border border-gray-100",
-                      activeCategory === cat.id && "ring-2 ring-[#FF6B00] ring-offset-2"
-                    )}>
+                      activeCategory === cat.id && "ring-2 ring-offset-2"
+                    )}
+                    style={{ ringColor: activeCategory === cat.id ? primaryColor : 'transparent' } as any}
+                    >
                       <img src={cat.imageUrl} alt={cat.name} className="w-full h-full object-cover" />
                     </div>
                     <span className="text-[11px] font-bold">{cat.name}</span>
@@ -750,8 +753,8 @@ export function MenuPage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold font-display tracking-tight text-[#111]">{t.artisanal}</h2>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[#FF6B00] animate-pulse" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#FF6B00]">{t.live}</span>
+                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primaryColor }} />
+                  <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: primaryColor }}>{t.live}</span>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

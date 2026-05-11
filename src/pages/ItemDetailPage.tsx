@@ -5,7 +5,7 @@ import { doc, getDoc, collection, query, limit, getDocs, where } from 'firebase/
 import { MenuItem, OperationType } from '../types';
 import { handleFirestoreError } from '../lib/dbService';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, Share2, Heart, Star, Clock, Flame, Info, Check, Plus, Minus, ChevronRight, X, Box, Maximize2 } from 'lucide-react';
+import { ChevronLeft, Share2, Heart, Star, Clock, Flame, Info, Check, Plus, Minus, ChevronRight, X, Box, Maximize2, Youtube } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useCart } from '../context/CartContext';
 
@@ -15,10 +15,19 @@ const playClick = () => {
   audio.play().catch(() => {});
 };
 
-function DetailGallery({ images, name }: { images?: string[], name: string }) {
+ function DetailGallery({ images, name, videoUrls }: { images?: string[], name: string, videoUrls?: string[] }) {
   const [index, setIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
+  
   const displayImages = (images && images.length > 0) ? images : ['https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=1000'];
+  const displayVideos = videoUrls || [];
+  const totalSlides = displayImages.length + displayVideos.length;
+
+  const getYoutubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
 
   return (
     <>
@@ -29,18 +38,33 @@ function DetailGallery({ images, name }: { images?: string[], name: string }) {
         >
           {displayImages.map((img, i) => (
             <img 
-              key={i}
+              key={`img-${i}`}
               src={img}
               alt={`${name} ${i}`}
               className="w-full h-full object-cover flex-shrink-0 cursor-pointer"
               onClick={() => setShowLightbox(true)}
             />
           ))}
+          {displayVideos.map((url, i) => {
+            const id = getYoutubeId(url);
+            if (!id) return null;
+            return (
+              <div key={`vid-${i}`} className="w-full h-full flex-shrink-0 bg-black relative">
+                 <iframe 
+                    className="w-full h-full pointer-events-none"
+                    src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=1&modestbranding=1&rel=0&controls=0&showinfo=0&loop=1&playlist=${id}`}
+                    allow="autoplay; encrypted-media"
+                    frameBorder="0"
+                 />
+                 <div className="absolute inset-0 z-10" /> {/* Prevent interaction */}
+              </div>
+            );
+          })}
         </div>
         
-        {displayImages.length > 1 && (
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-1.5 px-3 py-1.5 rounded-full bg-black/20 backdrop-blur-md border border-white/10">
-            {displayImages.map((_, i) => (
+        {totalSlides > 1 && (
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-1.5 px-3 py-1.5 rounded-full bg-black/20 backdrop-blur-md border border-white/10 z-20">
+            {Array.from({ length: totalSlides }).map((_, i) => (
               <button 
                 key={i} 
                 className={cn("w-1.5 h-1.5 rounded-full transition-all duration-300", i === index ? "bg-white w-4" : "bg-white/40")}
@@ -50,20 +74,20 @@ function DetailGallery({ images, name }: { images?: string[], name: string }) {
           </div>
         )}
 
-        {/* Navigation Arrows for Large Screens or Explicit Clicks */}
-        {displayImages.length > 1 && (
+        {/* Navigation Arrows */}
+        {totalSlides > 1 && (
           <>
             <button 
               onClick={() => setIndex(prev => Math.max(0, prev - 1))}
               disabled={index === 0}
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white disabled:opacity-0 transition-opacity"
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white disabled:opacity-0 transition-opacity z-20"
             >
               <ChevronLeft size={20} />
             </button>
             <button 
-              onClick={() => setIndex(prev => Math.min(displayImages.length - 1, prev + 1))}
-              disabled={index === displayImages.length - 1}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white disabled:opacity-0 transition-opacity"
+              onClick={() => setIndex(prev => Math.min(totalSlides - 1, prev + 1))}
+              disabled={index === totalSlides - 1}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white disabled:opacity-0 transition-opacity z-20"
             >
               <ChevronRight size={20} />
             </button>
@@ -81,7 +105,7 @@ function DetailGallery({ images, name }: { images?: string[], name: string }) {
           >
             <button 
               onClick={() => setShowLightbox(false)}
-              className="absolute top-8 right-8 text-white w-12 h-12 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all z-10"
+              className="absolute top-8 right-8 text-white w-12 h-12 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all z-[110]"
             >
               <X size={24} />
             </button>
@@ -91,13 +115,19 @@ function DetailGallery({ images, name }: { images?: string[], name: string }) {
               animate={{ scale: 1, opacity: 1 }}
               className="relative w-full max-w-lg aspect-[4/5] bg-black rounded-[32px] overflow-hidden shadow-2xl"
             >
-               <img src={displayImages[index]} alt={name} className="w-full h-full object-contain" />
+               {index < displayImages.length ? (
+                 <img src={displayImages[index]} alt={name} className="w-full h-full object-contain" />
+               ) : (
+                 <div className="w-full h-full bg-black flex items-center justify-center">
+                    <Youtube size={64} className="text-red-600 animate-pulse" />
+                 </div>
+               )}
             </motion.div>
 
             <div className="mt-12 flex gap-4 overflow-x-auto p-4 w-full justify-center hide-scrollbar">
               {displayImages.map((img, i) => (
                 <button 
-                  key={i}
+                  key={`thumb-img-${i}`}
                   onClick={() => setIndex(i)}
                   className={cn(
                     "w-20 h-20 rounded-[20px] overflow-hidden transition-all flex-shrink-0 border-2",
@@ -107,10 +137,22 @@ function DetailGallery({ images, name }: { images?: string[], name: string }) {
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
+              {displayVideos.map((url, i) => (
+                <button 
+                  key={`thumb-vid-${i}`}
+                  onClick={() => setIndex(displayImages.length + i)}
+                  className={cn(
+                    "w-20 h-20 rounded-[20px] bg-black flex items-center justify-center overflow-hidden transition-all flex-shrink-0 border-2",
+                    (displayImages.length + i) === index ? "border-[#FF6B00] scale-110 shadow-lg shadow-[#FF6B00]/20" : "border-transparent opacity-40 grayscale"
+                  )}
+                >
+                  <Youtube size={32} className="text-red-600" />
+                </button>
+              ))}
             </div>
             
-            <p className="mt-6 text-gray-500 font-black uppercase text-[10px] tracking-widest leading-loose">
-              Visualizing the Craft <br /> <span className="text-white">SCALORA RESEARCH LAB</span>
+            <p className="mt-6 text-gray-500 font-black uppercase text-[10px] tracking-widest leading-loose text-center">
+              Visualizing the Craft <br /> <span className="text-white uppercase">Neural Matrix Node</span>
             </p>
           </motion.div>
         )}
@@ -182,7 +224,7 @@ export function ItemDetailPage() {
           </div>
         </div>
 
-        <DetailGallery images={item.images || (item.imageUrl ? [item.imageUrl] : [])} name={item.name} />
+        <DetailGallery images={item.images || (item.imageUrl ? [item.imageUrl] : [])} name={item.name} videoUrls={item.videoUrls} />
       </div>
 
       {/* Content Section */}

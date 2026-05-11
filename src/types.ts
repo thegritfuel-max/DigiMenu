@@ -14,6 +14,7 @@ export interface Restaurant {
   suggestedReviews?: string[];
   adminUids: string[];
   adminEmails?: string[];
+  adminCredentials?: { email: string; password: string }[];
   language?: 'en' | 'mr';
   socialLinks?: {
     instagram?: string;
@@ -38,6 +39,7 @@ export interface MenuItem {
   price: number;
   imageUrl?: string;
   images?: string[];
+  videoUrls?: string[];
   arModelUrl?: string;
   categoryId: string;
   isVeg: boolean;

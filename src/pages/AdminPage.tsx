@@ -15,6 +15,12 @@ export function AdminPage() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [customUser, setCustomUser] = useState<{ email: string } | null>(() => {
+    const saved = localStorage.getItem('admin_session');
+    return saved ? JSON.parse(saved) : null;
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,49 +47,98 @@ export function AdminPage() {
     }
   };
 
+  const handleCustomLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!restaurant) return;
+    const creds = restaurant.adminCredentials?.find(c => c.email === loginEmail && c.password === loginPassword);
+    if (creds) {
+      setCustomUser({ email: creds.email });
+      localStorage.setItem('admin_session', JSON.stringify({ email: creds.email }));
+    } else {
+      alert('Invalid email or password');
+    }
+  };
+
+  const logout = () => {
+    auth.signOut();
+    setCustomUser(null);
+    localStorage.removeItem('admin_session');
+  };
+
   const isAdmin = restaurant && (
     (!restaurant.adminEmails || (restaurant.adminEmails as any).length === 0) || 
-    (user?.email && restaurant.adminEmails?.includes(user.email))
+    (user?.email && restaurant.adminEmails?.includes(user.email)) ||
+    (customUser?.email && restaurant.adminCredentials?.some(c => c.email === customUser.email))
   );
   const primaryColor = restaurant?.primaryColor || '#ea580c'; // default orange-600
 
   if (authLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
-        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full" />
+        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-8 h-8 border-4 border-t-transparent rounded-full" style={{ borderColor: primaryColor, borderTopColor: 'transparent' }} />
       </div>
     );
   }
 
-  if (!user || !isAdmin) {
+  if ((!user && !customUser) || !isAdmin) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-gray-50 p-6 text-center space-y-10">
         <div className="relative">
           <div className="w-24 h-24 bg-white rounded-[40px] shadow-2xl flex items-center justify-center text-[#111] border border-gray-100 z-10 relative">
             <Lock size={44} strokeWidth={1.5} />
           </div>
-          <div className="absolute -inset-4 bg-orange-500/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute -inset-4 rounded-full blur-3xl animate-pulse opacity-20" style={{ backgroundColor: primaryColor }} />
         </div>
 
         <div className="space-y-4 max-w-sm">
           <h1 className="text-3xl font-black uppercase tracking-tighter text-[#111]">Secure Terminal</h1>
           <p className="text-gray-500 text-sm font-medium leading-relaxed">
-            Authorized personnel only. Access to this administrative node requires verified neural clearance.
+            Authorized personnel only. Access requires verified neural clearance or admin credentials.
           </p>
         </div>
 
-        {!user ? (
-          <div className="space-y-6 w-full max-w-xs">
+        {(!user && !customUser) ? (
+          <div className="space-y-6 w-full max-w-sm">
+            <form onSubmit={handleCustomLogin} className="bg-white p-6 rounded-[32px] shadow-xl border border-gray-100 space-y-4 text-left">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Direct Access</label>
+                <input 
+                  type="email" 
+                  placeholder="Admin Email" 
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-6 text-sm outline-none focus:ring-2 transition-all"
+                  style={{ '--tw-ring-color': primaryColor } as any}
+                  value={loginEmail}
+                  onChange={e => setLoginEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <input 
+                  type="password" 
+                  placeholder="Master Key (Password)" 
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-6 text-sm outline-none focus:ring-2 transition-all"
+                  style={{ '--tw-ring-color': primaryColor } as any}
+                  value={loginPassword}
+                  onChange={e => setLoginPassword(e.target.value)}
+                />
+              </div>
+              <button className="w-full text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-xl" style={{ backgroundColor: primaryColor }}>
+                Authenticate
+              </button>
+            </form>
+
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-px bg-gray-100" />
+              <span className="text-[10px] font-black text-gray-300 uppercase italic">Or Pulse-in via</span>
+              <div className="flex-1 h-px bg-gray-100" />
+            </div>
+
             <button 
               onClick={handleLogin}
-              className="w-full flex items-center justify-center gap-4 bg-white border border-gray-200 px-8 py-5 rounded-[24px] shadow-sm hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all font-black uppercase tracking-widest text-xs text-[#111]"
+              className="w-full flex items-center justify-center gap-4 bg-white border border-gray-200 px-8 py-4 rounded-[24px] shadow-sm hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all font-bold uppercase tracking-widest text-[10px] text-[#111]"
             >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" />
-              Sign in with Google
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" />
+              Neural ID (Google)
             </button>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
-              Use the primary administrator account associated with this laboratory.
-            </p>
           </div>
         ) : (
           <div className="space-y-8 w-full max-w-sm">
@@ -93,25 +148,21 @@ export function AdminPage() {
                 </div>
                 <div className="space-y-2 relative">
                   <p className="text-red-600 text-[10px] font-black uppercase tracking-[0.3em]">Clearance Denied</p>
-                  <p className="text-red-900 font-bold text-sm">Email {user.email} is not authorized for this node.</p>
+                  <p className="text-red-900 font-bold text-sm">Session {user?.email || customUser?.email} is not authorized.</p>
                 </div>
                 
                 <div className="pt-4 space-y-4">
                   <div className="space-y-2">
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-left">Your Authorized Email:</p>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-left">Your identity:</p>
                     <div className="flex items-center gap-3 bg-white p-4 rounded-2xl border border-red-100 shadow-inner">
-                      <code className="flex-1 text-[10px] font-mono font-bold text-gray-600 break-all text-left">{user.email}</code>
-                      <button 
-                        onClick={() => { navigator.clipboard.writeText(user.email || ''); alert('Email Copied'); }}
-                        className="bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-200"
-                      >Copy</button>
+                      <code className="flex-1 text-[10px] font-mono font-bold text-gray-600 break-all text-left">{user?.email || customUser?.email}</code>
                     </div>
                   </div>
                   <p className="text-[9px] text-gray-400 italic">Provide this email to an existing admin to grant access via Settings.</p>
                 </div>
              </div>
 
-             <button onClick={() => auth.signOut()} className="text-gray-400 font-black text-[10px] uppercase tracking-widest flex items-center gap-3 mx-auto hover:text-black transition-colors">
+             <button onClick={logout} className="text-gray-400 font-black text-[10px] uppercase tracking-widest flex items-center gap-3 mx-auto hover:text-black transition-colors">
                 <LogOut size={16} /> Terminate Request & Sign Out
              </button>
           </div>
@@ -226,11 +277,11 @@ export function AdminPage() {
             <div className="hidden sm:block h-8 w-px bg-gray-100" />
             <div className="hidden sm:flex items-center gap-3">
               <div className="flex flex-col items-end">
-                 <p className="text-xs font-bold text-gray-900 leading-none">{user.displayName || 'Admin'}</p>
+                 <p className="text-xs font-bold text-gray-900 leading-none">{user?.displayName || customUser?.email || 'Admin'}</p>
                  <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">Clearance: Level 4</p>
               </div>
               <div className="w-9 h-9 rounded-full bg-gray-100 border border-gray-200 overflow-hidden shadow-sm">
-                <img src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} className="w-full h-full object-cover" />
+                <img src={user?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || customUser?.email}`} className="w-full h-full object-cover" />
               </div>
             </div>
           </div>
@@ -320,6 +371,8 @@ function AdminSettings({ user }: { user: FirebaseUser }) {
       setLoading(false);
     }
   };
+
+  const primaryColor = restaurant?.primaryColor || '#FF6B00';
 
   if (!restaurant) return null;
 
@@ -473,6 +526,7 @@ function AdminSettings({ user }: { user: FirebaseUser }) {
             {/* Email Clearance */}
             <div className="space-y-4">
               <div className="space-y-2 text-left">
+                <p className="text-[10px] font-black uppercase text-gray-400">Authorized Emails (Google Login)</p>
                 {(restaurant.adminEmails || []).map((email, index) => (
                   <div key={index} className="flex items-center gap-3 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100">
                     <MessageCircle size={14} className="text-gray-400" />
@@ -496,7 +550,8 @@ function AdminSettings({ user }: { user: FirebaseUser }) {
                     type="email" 
                     id="newAdminEmail"
                     placeholder="Enter administrator email..."
-                    className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:ring-2 focus:ring-orange-500 outline-none text-[10px] font-medium"
+                    className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:ring-2 outline-none text-[10px] font-medium"
+                    style={{ '--tw-ring-color': primaryColor } as any}
                   />
                   <button 
                     type="button"
@@ -512,7 +567,66 @@ function AdminSettings({ user }: { user: FirebaseUser }) {
                     }}
                     className="bg-black text-white px-4 rounded-xl font-bold text-[10px]"
                   >
-                    Add Admin
+                    Add Neural ID
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-left pt-4 border-t border-gray-50">
+                <p className="text-[10px] font-black uppercase text-gray-400">Direct Credentials (Email/Pass)</p>
+                {(restaurant.adminCredentials || []).map((cred, index) => (
+                  <div key={index} className="flex items-center gap-3 bg-gray-50 px-4 py-3 rounded-xl border border-gray-100">
+                    <Lock size={14} className="text-gray-400" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold truncate">{cred.email}</p>
+                      <p className="text-[8px] text-gray-400 font-mono">Password: ••••••••</p>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const newCreds = [...(restaurant.adminCredentials || [])];
+                        newCreds.splice(index, 1);
+                        setRestaurant({...restaurant, adminCredentials: newCreds});
+                      }}
+                      className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input 
+                    type="email" 
+                    id="credEmail"
+                    placeholder="Admin Email"
+                    className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:ring-2 outline-none text-[10px]"
+                    style={{ '--tw-ring-color': primaryColor } as any}
+                  />
+                  <input 
+                    type="text" 
+                    id="credPass"
+                    placeholder="Set Master Password"
+                    className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl py-3 px-4 focus:ring-2 outline-none text-[10px]"
+                    style={{ '--tw-ring-color': primaryColor } as any}
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const emailInp = document.getElementById('credEmail') as HTMLInputElement;
+                      const passInp = document.getElementById('credPass') as HTMLInputElement;
+                      if (emailInp.value && passInp.value) {
+                        setRestaurant({
+                          ...restaurant, 
+                          adminCredentials: [...(restaurant.adminCredentials || []), { email: emailInp.value, password: passInp.value }]
+                        });
+                        emailInp.value = '';
+                        passInp.value = '';
+                      }
+                    }}
+                    className="bg-black text-white px-6 rounded-xl font-black uppercase text-[10px]"
+                  >
+                    Authorize Direct
                   </button>
                 </div>
               </div>
@@ -1133,41 +1247,130 @@ function AdminMenu() {
                 exit={{ scale: 0.9, opacity: 0, y: 40 }} 
                 className="relative bg-white w-full max-w-4xl rounded-[48px] overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] text-[#111111]"
              >
-                <div className="md:w-5/12 bg-gray-50/50 p-8 flex flex-col gap-8 overflow-y-auto border-r border-gray-100">
-                   <div className="space-y-1">
-                      <h3 className="text-2xl font-black">Flavor Asset</h3>
-                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Image Matrix Integration</p>
-                   </div>
-                   
-                   <div className="aspect-square rounded-[32px] overflow-hidden bg-white border border-gray-200 shadow-inner group relative">
-                      <img src={editingItem.imageUrl || getFallbackImage(editingItem.name || '')} className="w-full h-full object-cover" />
-                      <label className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-center p-6">
-                         <Upload size={32} className="text-white mb-3" />
-                         <span className="text-white text-[10px] font-black uppercase tracking-widest leading-tight">Neural Upload</span>
-                       <div className="mt-4 space-y-1 bg-white p-2 rounded-xl border border-gray-100">
-                          <label className="text-[8px] font-black uppercase text-gray-400 block px-2">Matrix URL</label>
-                          <input 
-                            placeholder="Paste link"
-                            className="w-full bg-transparent border-none rounded-lg py-1 px-2 text-[11px] outline-none"
-                            value={editingItem.imageUrl || ''}
-                            onChange={e => setEditingItem({...editingItem, imageUrl: e.target.value})}
-                          />
+                 <div className="md:w-5/12 bg-gray-50/50 p-8 flex flex-col gap-6 overflow-y-auto border-r border-gray-100">
+                    <div className="space-y-1">
+                       <h3 className="text-2xl font-black">Media Assets</h3>
+                       <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Image & Video Nodes</p>
+                    </div>
+                    
+                    <div className="space-y-4">
+                       <label className="text-[10px] font-black uppercase text-gray-400 block">Main Image</label>
+                       <div className="aspect-square rounded-[32px] overflow-hidden bg-white border border-gray-200 shadow-inner group relative">
+                          <img src={editingItem.imageUrl || getFallbackImage(editingItem.name || '')} className="w-full h-full object-cover" />
+                          <label className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-center p-6">
+                             <Upload size={32} className="text-white mb-3" />
+                             <span className="text-white text-[10px] font-black uppercase tracking-widest leading-tight">Neural Upload</span>
+                             <input 
+                                type="file" 
+                                className="hidden" 
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => setEditingItem({...editingItem, imageUrl: reader.result as string});
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                             />
+                          </label>
                        </div>
-                         <input 
-                            type="file" 
-                            className="hidden" 
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => setEditingItem({...editingItem, imageUrl: reader.result as string});
-                                reader.readAsDataURL(file);
-                              }
+                       <input 
+                         placeholder="Paste image URL..."
+                         className="w-full bg-white border border-gray-100 rounded-xl py-3 px-4 text-[10px] outline-none font-medium"
+                         value={editingItem.imageUrl || ''}
+                         onChange={e => setEditingItem({...editingItem, imageUrl: e.target.value})}
+                       />
+                    </div>
+
+                    <div className="space-y-4">
+                       <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-black uppercase text-gray-400">Extra Images</label>
+                          <label className="text-[10px] font-black uppercase cursor-pointer flex items-center gap-1" style={{ color: primaryColor }}>
+                             <Plus size={12} /> Add
+                             <input 
+                                type="file" 
+                                className="hidden" 
+                                multiple
+                                accept="image/*"
+                                onChange={(e) => {
+                                  if (!e.target.files) return;
+                                  const files = Array.from(e.target.files);
+                                  files.forEach(file => {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      setEditingItem(prev => ({
+                                        ...prev,
+                                        images: [...(prev?.images || []), reader.result as string]
+                                      }));
+                                    };
+                                    reader.readAsDataURL(file);
+                                  });
+                                }}
+                             />
+                          </label>
+                       </div>
+                       <div className="grid grid-cols-4 gap-2">
+                          {(editingItem.images || []).map((img, i) => (
+                            <div key={i} className="aspect-square rounded-lg bg-gray-200 relative group overflow-hidden border border-gray-200">
+                               <img src={img} className="w-full h-full object-cover" />
+                               <button 
+                                 onClick={() => {
+                                   const newImgs = [...(editingItem.images || [])];
+                                   newImgs.splice(i, 1);
+                                   setEditingItem({...editingItem, images: newImgs});
+                                 }}
+                                 className="absolute inset-0 bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"
+                               >
+                                 <Trash2 size={12} />
+                               </button>
+                            </div>
+                          ))}
+                          <button 
+                            onClick={() => {
+                              const url = prompt('Enter image URL:');
+                              if (url) setEditingItem({...editingItem, images: [...(editingItem.images || []), url]});
                             }}
-                         />
-                      </label>
-                   </div>
+                            className="aspect-square rounded-lg bg-white border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 hover:text-gray-500"
+                          >
+                             <Plus size={16} />
+                          </button>
+                       </div>
+                    </div>
+
+                    <div className="space-y-4">
+                       <label className="text-[10px] font-black uppercase text-gray-400 block">YouTube Links</label>
+                       <div className="space-y-2">
+                          {(editingItem.videoUrls || []).map((url, i) => (
+                            <div key={i} className="flex gap-2">
+                               <input 
+                                 className="flex-1 bg-white border border-gray-100 rounded-xl py-2 px-4 text-[10px] font-medium" 
+                                 placeholder="YouTube Link..."
+                                 value={url} 
+                                 onChange={e => {
+                                   const newUrls = [...(editingItem.videoUrls || [])];
+                                   newUrls[i] = e.target.value;
+                                   setEditingItem({...editingItem, videoUrls: newUrls});
+                                 }}
+                               />
+                               <button 
+                                 onClick={() => {
+                                   const newUrls = [...(editingItem.videoUrls || [])];
+                                   newUrls.splice(i, 1);
+                                   setEditingItem({...editingItem, videoUrls: newUrls});
+                                 }}
+                                 className="p-2 text-red-500"
+                               ><Trash2 size={14} /></button>
+                            </div>
+                          ))}
+                          <button 
+                            onClick={() => setEditingItem({...editingItem, videoUrls: [...(editingItem.videoUrls || []), '']})}
+                            className="w-full bg-white border border-dashed border-gray-200 py-3 rounded-xl text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center justify-center gap-2"
+                          >
+                             <Youtube size={14} /> Add Video
+                          </button>
+                       </div>
+                    </div>
 
                    <div className="grid grid-cols-2 gap-4">
                         <button 
