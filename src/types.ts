@@ -13,6 +13,7 @@ export interface Restaurant {
   googleReviewLink?: string;
   suggestedReviews?: string[];
   adminUids: string[];
+  adminEmails?: string[];
   language?: 'en' | 'mr';
   socialLinks?: {
     instagram?: string;

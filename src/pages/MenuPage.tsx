@@ -461,9 +461,12 @@ export function MenuPage() {
   const t = translations[language];
 
   const userIsAdmin = user && restaurant && (
-    !restaurant.adminUids || 
-    restaurant.adminUids.length === 0 || 
-    restaurant.adminUids.includes(user.uid)
+    (
+      (!restaurant.adminUids || restaurant.adminUids.length === 0) && 
+      (!restaurant.adminEmails || (restaurant.adminEmails as any).length === 0)
+    ) || 
+    restaurant.adminUids?.includes(user.uid) ||
+    (user.email && restaurant.adminEmails?.includes(user.email))
   );
 
   if (loading || !isLoaded) {
@@ -932,12 +935,21 @@ export function MenuPage() {
                        <p className="text-xs font-medium text-red-500 leading-relaxed">
                           Your account does not have admin clearance for this lab. Request authorization from an existing administrator or check your login.
                        </p>
-                       <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-red-100">
-                          <code className="flex-1 text-[10px] font-mono font-bold text-gray-500 break-all">{user.uid}</code>
-                          <button 
-                            onClick={() => { navigator.clipboard.writeText(user.uid); alert('UID Copied'); }}
-                            className="bg-red-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase"
-                          >Copy</button>
+                       <div className="space-y-2">
+                         <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-red-100">
+                            <code className="flex-1 text-[10px] font-mono font-bold text-gray-500 break-all">{user.uid}</code>
+                            <button 
+                              onClick={() => { navigator.clipboard.writeText(user.uid); alert('UID Copied'); }}
+                              className="bg-red-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase"
+                            >UID</button>
+                         </div>
+                         <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-red-100">
+                            <code className="flex-1 text-[10px] font-mono font-bold text-gray-500 break-all">{user.email}</code>
+                            <button 
+                              onClick={() => { navigator.clipboard.writeText(user.email || ''); alert('Email Copied'); }}
+                              className="bg-red-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase"
+                            >Email</button>
+                         </div>
                        </div>
                     </div>
                   )}
