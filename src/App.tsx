@@ -14,17 +14,25 @@ function RootRedirect() {
 
   useEffect(() => {
     const checkRestaurants = async () => {
+      // Immediate check of localStorage for fastest possible redirect
+      const lastId = localStorage.getItem('last_restaurant_id');
+      
       try {
         const q = query(collection(db, 'restaurants'), orderBy('createdAt', 'desc'), limit(1));
         const snap = await getDocs(q);
+        
         if (!snap.empty) {
-          setTarget(`/${snap.docs[0].id}`);
+          const firstId = snap.docs[0].id;
+          setTarget(`/${firstId}`);
+          localStorage.setItem('last_restaurant_id', firstId);
+        } else if (lastId) {
+          setTarget(`/${lastId}`);
         } else {
           setTarget('/setup');
         }
       } catch (e) {
         console.error("Redirect error:", e);
-        setTarget('/setup');
+        setTarget(lastId ? `/${lastId}` : '/setup');
       } finally {
         setLoading(false);
       }
@@ -32,7 +40,13 @@ function RootRedirect() {
     checkRestaurants();
   }, []);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white">
+        <div className="w-10 h-10 border-4 border-[#111] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
   return <Navigate to={target || '/setup'} replace />;
 }
 

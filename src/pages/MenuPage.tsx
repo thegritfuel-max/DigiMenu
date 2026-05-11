@@ -400,6 +400,7 @@ export function MenuPage() {
         const data = doc.data() as Restaurant;
         setRestaurant({ id: doc.id, ...data } as Restaurant);
         if (data.language) setLanguage(data.language);
+        localStorage.setItem('last_restaurant_id', restaurantId);
       }
       setLoading(false);
     }, (error) => handleFirestoreError(error, OperationType.GET, `restaurants/${restaurantId}`));
