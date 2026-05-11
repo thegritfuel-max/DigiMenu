@@ -6,99 +6,58 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Auth Helpers
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isSuperAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email == "thegritfuel@gmail.com" ||
-        request.auth.token.email_verified == true && request.auth.token.email == "thegritfuel@gmail.com"
-      );
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function getRestaurant(restaurantId) {
+      return get(/databases/$(database)/documents/restaurants/$(restaurantId)).data;
     }
 
     function isAdmin(restaurantId) {
+      let rest = getRestaurant(restaurantId);
       return isSignedIn() && (
-             isSuperAdmin() ||
-             (exists(/databases/$(database)/documents/restaurants/$(restaurantId)) &&
-              request.auth.uid in get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.get('adminUids', []))
+        !('adminUids' in rest) || 
+        rest.adminUids.size() == 0 || 
+        request.auth.uid in rest.adminUids
       );
     }
 
-    // Validation Helpers
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
+    // Restaurant rules
     match /restaurants/{restaurantId} {
-      // Publicly readable
       allow read: if true;
+      allow write: if isAdmin(restaurantId);
       
-      // Admin operations
-      allow create: if isSignedIn() && 
-                    incoming().get('adminUids', []).size() > 0 && 
-                    request.auth.uid in incoming().adminUids;
-      
-      allow update: if isSignedIn() && 
-                    existing().get('adminUids', []).size() > 0 && 
-                    request.auth.uid in existing().adminUids && (
-                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'logoUrl', 'primaryColor', 'accentColor', 'googleReviewLink', 'suggestedReviews', 'adminUids', 'language'])
-                    );
-
-      match /offers/{offerId} {
-        allow read: if true;
-        allow write: if isAdmin(restaurantId);
-      }
-
+      // Subcollections
       match /categories/{categoryId} {
         allow read: if true;
         allow write: if isAdmin(restaurantId);
       }
-
+      
       match /menu_items/{itemId} {
         allow read: if true;
         allow write: if isAdmin(restaurantId);
       }
-
+      
       match /banners/{bannerId} {
         allow read: if true;
         allow write: if isAdmin(restaurantId);
       }
-
+      
+      match /offers/{offerId} {
+        allow read: if true;
+        allow write: if isAdmin(restaurantId);
+      }
+      
       match /orders/{orderId} {
-        // List rules are tricky with resource.data - we must ensure query compatibility
-        // If user is admin, allow listing all
-        // If user is guest/customer, they can only list their own (requires query filter)
-        allow list: if isSignedIn() && (
-          isAdmin(restaurantId) || 
-          resource.data.get('customerId', '') == request.auth.uid
-        );
-
-        allow get: if (isSignedIn() && (
-          isAdmin(restaurantId) || 
-          existing().get('customerId', '') == request.auth.uid
-        )) || (!isSignedIn() && existing().get('customerId', '') == '');
-
-        // Guests can create orders
-        allow create: if isValidOrder(incoming()) && (
-          isSignedIn() ? (incoming().get('customerId', '') == request.auth.uid || !('customerId' in incoming())) : !('customerId' in incoming())
-        );
-
-        // Only admins can update status
-        allow update: if isAdmin(restaurantId) && 
-                      incoming().diff(existing()).affectedKeys().hasOnly(['status']);
-
-        function isValidOrder(data) {
-          return data.get('tableNumber', '') is string && data.get('tableNumber', '').size() > 0
-              && data.get('items', []) is list && data.get('items', []).size() > 0
-              && data.get('totalAmount', 0) is number
-              && data.get('status', 'pending') in ['pending', 'preparing', 'completed'];
-        }
+        allow read: if isAdmin(restaurantId);
+        allow create: if true; // Public can place orders
+        allow update, delete: if isAdmin(restaurantId);
       }
     }
   }

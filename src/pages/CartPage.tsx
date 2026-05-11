@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, Trash2, Plus, Minus, ShoppingBag, ArrowRight, Table, Tag, CheckCircle2, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { OperationType, OrderStatus, Offer } from '../types';
 import { handleFirestoreError } from '../lib/dbService';
 import { useCart } from '../context/CartContext';
@@ -12,6 +12,7 @@ import { useCart } from '../context/CartContext';
 export function CartPage() {
   const { restaurantId } = useParams<{ restaurantId: string }>();
   const navigate = useNavigate();
+  const [restaurant, setRestaurant] = useState<any>(null);
   const { 
     cartItems, 
     updateQuantity, 
@@ -28,9 +29,20 @@ export function CartPage() {
   const [notes, setNotes] = useState('');
   const [isOrdering, setIsOrdering] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const [lastOrderId, setLastOrderId] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [couponError, setCouponError] = useState('');
   const [showOfferSplash, setShowOfferSplash] = useState(false);
+
+  useEffect(() => {
+    if (!restaurantId) return;
+    return onSnapshot(doc(db, 'restaurants', restaurantId), (snap) => {
+      setRestaurant(snap.data());
+    });
+  }, [restaurantId]);
+
+  const primaryColor = restaurant?.primaryColor || '#ea580c';
+  const totalPayable = total + Math.round(total * 0.05);
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim() || !restaurantId) return;
@@ -70,7 +82,7 @@ export function CartPage() {
       const orderData = {
         tableNumber,
         items: cartItems.map(i => ({ itemId: i.id, name: i.name, quantity: i.quantity, price: i.price })),
-        totalAmount: total,
+        totalAmount: totalPayable,
         status: OrderStatus.PENDING,
         createdAt: serverTimestamp(),
         notes,
@@ -80,9 +92,10 @@ export function CartPage() {
         } : null
       };
 
-      await addDoc(collection(db, 'restaurants', restaurantId, 'orders'), orderData);
+      const docRef = await addDoc(collection(db, 'restaurants', restaurantId, 'orders'), orderData);
+      setLastOrderId(docRef.id);
       setOrderComplete(true);
-      clearCart();
+      // We don't clear cart yet so the user can see the summary, or we pass the items to the success state
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `restaurants/${restaurantId}/orders`);
     } finally {
@@ -91,22 +104,66 @@ export function CartPage() {
   };
 
   if (orderComplete) {
+    const qrData = `ORDER: ${lastOrderId.substring(0, 6)}\nTABLE: ${tableNumber}\nTOTAL: ₹${totalPayable}\nITEMS:\n${cartItems.map(i => `- ${i.quantity}x ${i.name}`).join('\n')}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
+
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center space-y-8">
-        <motion.div 
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="w-32 h-32 bg-green-50 text-green-500 rounded-full flex items-center justify-center"
-        >
-          <CheckCircle2 size={64} />
-        </motion.div>
-        <div className="space-y-2">
-          <h1 className="text-4xl font-black uppercase tracking-tighter">Order Logged</h1>
-          <p className="text-gray-500 font-medium">Your request has been prioritized in the kitchen queue.</p>
+      <div className="min-h-screen bg-white flex flex-col items-center p-6 text-center">
+        <div className="max-w-md w-full space-y-8 py-12">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-24 h-24 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto"
+          >
+            <CheckCircle2 size={48} />
+          </motion.div>
+
+          <div className="space-y-2">
+            <h1 className="text-3xl font-black uppercase tracking-tighter">Order Dispatched</h1>
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Protocol confirmed • Table {tableNumber}</p>
+          </div>
+
+          <div className="bg-gray-50 rounded-[40px] p-8 space-y-6 border border-gray-100 shadow-inner">
+             <div className="space-y-4">
+                <div className="bg-white p-4 rounded-3xl shadow-xl inline-block">
+                   <img src={qrUrl} alt="Order QR" className="w-48 h-48" />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Show this to your Waiter for verification</p>
+             </div>
+
+             <div className="pt-6 border-t border-gray-200 text-left space-y-4">
+                <h4 className="text-[10px] font-black uppercase tracking-widest" style={{ color: primaryColor }}>Order Summary</h4>
+                <div className="space-y-2">
+                   {cartItems.map(item => (
+                     <div key={item.id} className="flex justify-between text-xs">
+                        <span className="font-bold text-gray-600">{item.quantity}x {item.name}</span>
+                        <span className="font-black">₹{item.price * item.quantity}</span>
+                     </div>
+                   ))}
+                </div>
+                <div className="pt-4 border-t border-dashed border-gray-300 flex justify-between items-end">
+                   <div>
+                      <p className="text-[8px] font-black uppercase text-gray-400">Total Payable</p>
+                      <span className="text-2xl font-black">₹{totalPayable}</span>
+                   </div>
+                   <div className="text-right">
+                      <p className="text-[8px] font-black uppercase text-gray-400">Order ID</p>
+                      <span className="text-[9px] font-mono font-bold text-gray-600">{lastOrderId.substring(0, 8)}</span>
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          <div className="space-y-4">
+            <button 
+              onClick={() => { clearCart(); navigate(`/${restaurantId}`); }}
+              className="w-full bg-[#111111] text-white py-5 rounded-3xl font-black uppercase tracking-widest text-[10px] shadow-2xl active:scale-95 transition-all"
+            >
+              New Transaction Node
+            </button>
+            <p className="text-[9px] text-gray-400 font-medium italic">Thank you for dining at {restaurant?.name}. Connect with us!</p>
+          </div>
         </div>
-        <Link to={`/${restaurantId}`} className="bg-black text-white px-8 py-4 rounded-2xl font-bold flex items-center gap-2">
-          Return to Menu <ArrowRight size={18} />
-        </Link>
       </div>
     );
   }
@@ -162,7 +219,16 @@ export function CartPage() {
           </button>
           <h1 className="text-xl font-black uppercase tracking-tight">Order manifest</h1>
         </div>
-        <button onClick={clearCart} className="text-[10px] font-black uppercase tracking-widest text-red-500">Purge Cart</button>
+        <button 
+          onClick={() => {
+            if (window.confirm("Are you sure you want to purge the current selection?")) {
+              clearCart();
+            }
+          }} 
+          className="text-[10px] font-black uppercase tracking-widest text-red-500"
+        >
+          Purge Cart
+        </button>
       </div>
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 max-w-3xl mx-auto w-full">
@@ -248,9 +314,10 @@ export function CartPage() {
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   className={cn(
-                    "w-full bg-gray-50 border-none rounded-2xl py-4 pl-12 pr-6 text-xs font-black tracking-widest outline-none focus:ring-2 transition-all",
-                    appliedOffer ? "focus:ring-green-500 bg-green-50 text-green-700" : "focus:ring-orange-600"
+                    "w-full bg-gray-50 border-none rounded-2xl py-4 pl-12 pr-6 text-xs font-black tracking-widest outline-none transition-all",
+                    appliedOffer ? "ring-2 ring-green-500 bg-green-50 text-green-700" : "focus:ring-2"
                   )}
+                  style={{ "--tw-ring-color": !appliedOffer ? primaryColor : undefined } as any}
                  />
               </div>
               <button 
@@ -270,7 +337,8 @@ export function CartPage() {
             placeholder="E.g. No allergies, medium heat..." 
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full bg-gray-50 border-none rounded-2xl p-6 outline-none focus:ring-2 focus:ring-orange-600 resize-none h-24 text-sm font-medium"
+            className="w-full bg-gray-50 border-none rounded-2xl p-6 outline-none focus:ring-2 resize-none h-24 text-sm font-medium"
+            style={{ "--tw-ring-color": primaryColor } as any}
            />
         </div>
 
@@ -315,7 +383,8 @@ export function CartPage() {
         <button 
           onClick={handlePlaceOrder}
           disabled={isOrdering || cartItems.length === 0}
-          className="md:w-64 bg-orange-600 text-white py-5 rounded-3xl font-black shadow-xl shadow-orange-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
+          className="md:w-64 text-white py-5 rounded-3xl font-black shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
+          style={{ backgroundColor: primaryColor, boxShadow: `0 8px 20px -4px ${primaryColor}66` }}
         >
           {isOrdering ? 'Deploying...' : 'Launch Order'}
           {!isOrdering && <ArrowRight size={18} />}

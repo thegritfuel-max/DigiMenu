@@ -14,6 +14,13 @@ export interface Restaurant {
   suggestedReviews?: string[];
   adminUids: string[];
   language?: 'en' | 'mr';
+  socialLinks?: {
+    instagram?: string;
+    facebook?: string;
+    youtube?: string;
+    linkedin?: string;
+    whatsapp?: string;
+  };
 }
 
 export interface Category {

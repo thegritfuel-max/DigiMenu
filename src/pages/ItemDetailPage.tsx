@@ -7,6 +7,7 @@ import { handleFirestoreError } from '../lib/dbService';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, Share2, Heart, Star, Clock, Flame, Info, Check, Plus, Minus, ChevronRight, X, Box, Maximize2 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useCart } from '../context/CartContext';
 
 const playClick = () => {
   const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
@@ -126,6 +127,7 @@ export function ItemDetailPage() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [showAR, setShowAR] = useState(false);
+  const { addToCart } = useCart();
 
   useEffect(() => {
     if (!restaurantId || !itemId) return;
@@ -291,7 +293,15 @@ export function ItemDetailPage() {
               <Plus size={20} />
             </button>
           </div>
-          <button onClick={playClick} className="flex-1 bg-[#FF6B00] text-white h-14 rounded-[20px] font-black shadow-xl shadow-[#FF6B00]/20 active:scale-95 transition-all uppercase tracking-widest text-sm">
+          <button 
+            onClick={() => {
+              playClick();
+              for(let i=0; i<quantity; i++) {
+                addToCart(item);
+              }
+            }} 
+            className="flex-1 bg-[#FF6B00] text-white h-14 rounded-[20px] font-black shadow-xl shadow-[#FF6B00]/20 active:scale-95 transition-all uppercase tracking-widest text-sm"
+          >
             Add to Order • ₹{item.price * quantity}
           </button>
         </div>

@@ -11,6 +11,186 @@ import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Copy, Facebook, Instagram, Youtube, Linkedin, MessageCircle, ExternalLink } from 'lucide-react';
+
+// Lazy initialize Gemini (will only work if key is provided)
+let genAIInstance: GoogleGenerativeAI | null = null;
+function getGenAI() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn("GEMINI_API_KEY is not set. Using fallback reviews.");
+    return null;
+  }
+  if (!genAIInstance) {
+    genAIInstance = new GoogleGenerativeAI(apiKey);
+  }
+  return genAIInstance;
+}
+
+function ReviewSection({ restaurant, primaryColor }: { restaurant: Restaurant, primaryColor: string }) {
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const generateReview = async (stars: number) => {
+    setRating(stars);
+    setGenerating(true);
+    
+    const fallbacks: Record<number, string> = {
+      5: `Amazing experience at ${restaurant.name}! The food was incredible and the hospitality was top-notch. Highly recommend to everyone!`,
+      4: `Really good food and solid service at ${restaurant.name}. We enjoyed our meal and will definitely be coming back.`,
+      3: `Good experience. The food was decent and the staff was friendly. Worth a visit if you are nearby.`,
+      2: `Expected more from ${restaurant.name}. The taste was okay but there's room for improvement in service.`,
+      1: `Disappointed with the visit. Hope they improve their quality soon.`
+    };
+
+    try {
+      const ai = getGenAI();
+      if (!ai) {
+        throw new Error("API Key missing");
+      }
+      
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = `Write a short, enthusiastic, and authentic restaurant review for "${restaurant.name}" based on a ${stars}-star rating. Mention great flavor, service, and atmosphere. Keep it under 30 words.`;
+      
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      setReview(response.text());
+    } catch (error) {
+      console.error("Gemini Error:", error);
+      setReview(fallbacks[stars as keyof typeof fallbacks] || fallbacks[5]);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(review);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="bg-white rounded-[40px] p-8 space-y-6 border border-gray-100 shadow-sm">
+      <div className="space-y-1">
+        <h3 className="font-black text-xl tracking-tight">Rate our Dispatch</h3>
+        <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest leading-none">AI-Assisted Feedback Matrix</p>
+      </div>
+
+      <div className="flex justify-center gap-2">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            onClick={() => { playClick(); generateReview(star); }}
+            className={cn(
+              "p-2 rounded-2xl transition-all active:scale-90",
+              rating >= star ? "" : "text-gray-200"
+            )}
+            style={{ color: rating >= star ? primaryColor : undefined }}
+          >
+            <Star size={32} fill={rating >= star ? "currentColor" : "none"} strokeWidth={2.5} />
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence>
+        {rating > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-4 overflow-hidden"
+          >
+            <div className="bg-gray-50 rounded-3xl p-6 relative border border-gray-100 group">
+              {generating ? (
+                <div className="flex items-center gap-3 py-2">
+                   <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" />
+                   <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                   <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                   <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-2">Neural Synthesis...</span>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs font-medium leading-relaxed italic text-gray-600">"{review}"</p>
+                  <button 
+                    onClick={copyToClipboard}
+                    className="absolute top-4 right-4 p-2 bg-white rounded-xl shadow-sm text-gray-400 hover:text-black transition-colors"
+                  >
+                    {copied ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-[9px] font-black uppercase text-gray-400 text-center tracking-widest">Copy and deploy to Google Network</p>
+              <a 
+                href={restaurant.googleReviewLink || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-full bg-[#111111] text-white py-4 rounded-3xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all"
+              >
+                <div className="bg-white p-1 rounded-full">
+                  <svg width="12" height="12" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                </div>
+                Support on Google
+              </a>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function RestaurantFooter({ restaurant, primaryColor }: { restaurant: Restaurant, primaryColor: string }) {
+  return (
+    <div className="pb-32 pt-16 px-4 space-y-10 text-center">
+      <div className="space-y-4">
+        <h2 className="text-2xl font-black font-display uppercase tracking-tight">Connect with {restaurant.name}</h2>
+        <div className="flex justify-center gap-4">
+          {restaurant.socialLinks?.instagram && (
+            <a href={restaurant.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-all text-[#E4405F]">
+              <Instagram size={24} />
+            </a>
+          )}
+          {restaurant.socialLinks?.facebook && (
+            <a href={restaurant.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-all text-[#1877F2]">
+              <Facebook size={24} />
+            </a>
+          )}
+          {restaurant.socialLinks?.youtube && (
+            <a href={restaurant.socialLinks.youtube} target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-all text-[#FF0000]">
+              <Youtube size={24} />
+            </a>
+          )}
+          {restaurant.socialLinks?.linkedin && (
+            <a href={restaurant.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-all text-[#0A66C2]">
+              <Linkedin size={24} />
+            </a>
+          )}
+          {restaurant.socialLinks?.whatsapp && (
+            <a href={`https://wa.me/${restaurant.socialLinks.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-all text-[#25D366]">
+              <MessageCircle size={24} />
+            </a>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest italic opacity-50">Thank you for Choosing Culinary Excellence at</p>
+        <h1 className="text-xl font-black uppercase tracking-tighter" style={{ color: primaryColor }}>{restaurant.name}</h1>
+      </div>
+
+      <div className="pt-4 flex flex-col items-center gap-1 opacity-20 group hover:opacity-100 transition-opacity">
+         <p className="text-[8px] font-black uppercase tracking-[0.4em] text-gray-400">Powered by Antigravity Protocol</p>
+         <div className="w-12 h-[1px] bg-gray-200" />
+      </div>
+    </div>
+  );
+}
 const translations = {
   en: {
     search: "Search for dishes, cafes...",
@@ -106,85 +286,6 @@ function SplashScreen({ restaurant }: { restaurant: Restaurant }) {
   );
 }
 
-function ReviewPrompt({ googleLink }: { googleLink: string }) {
-  const [rating, setRating] = useState<number | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [internalRating, setInternalRating] = useState<number>(0);
-
-  const handleSubmit = () => {
-    if (internalRating === 0) return;
-    setRating(internalRating);
-    if (internalRating >= 4) {
-      setTimeout(() => {
-        window.open(googleLink, '_blank');
-      }, 1000);
-    }
-    setSubmitted(true);
-  };
-
-  return (
-    <div className="mx-4 p-8 bg-[#111] rounded-[32px] text-white space-y-6 shadow-2xl relative overflow-hidden group">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF6B00]/20 rounded-full blur-[40px] -mr-16 -mt-16 transition-transform group-hover:scale-150" />
-      <div className="relative z-10">
-        {!submitted ? (
-          <div className="space-y-6">
-            <h3 className="text-2xl font-black font-display tracking-tight leading-tight">Rate your Experience</h3>
-            <p className="text-gray-400 text-sm font-medium">Help us perfect our culinary research.</p>
-            <div className="flex justify-between items-center bg-white/5 p-4 rounded-[24px]">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button 
-                  key={star} 
-                  onClick={() => { playClick(); setInternalRating(star); }}
-                  className="p-2 transition-all hover:scale-125"
-                >
-                  <Star 
-                    size={32} 
-                    className={cn(
-                      "transition-all",
-                      internalRating >= star ? "fill-[#FF6B00] text-[#FF6B00]" : "text-gray-600"
-                    )} 
-                  />
-                </button>
-              ))}
-            </div>
-            <button 
-              onClick={handleSubmit}
-              disabled={internalRating === 0}
-              className="w-full bg-[#FF6B00] text-white py-4 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
-            >
-              Submit Feedback
-            </button>
-          </div>
-        ) : (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="space-y-4 text-center py-4"
-          >
-            <div className="w-16 h-16 bg-[#FF6B00]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-               <CheckCircle2 className="text-[#FF6B00]" size={32} />
-            </div>
-            <h3 className="text-2xl font-black font-display tracking-tight leading-tight">
-              {rating! >= 4 ? "Redirecting to Google..." : "Thank you for the data."}
-            </h3>
-            <p className="text-gray-400 text-sm font-medium">
-              {rating! >= 4 
-                ? "Your positive review helps our decentralized kitchen grow." 
-                : "Our systems will analyze your feedback for manual recalibration."}
-            </p>
-            <button 
-              onClick={() => { playClick(); setSubmitted(false); setInternalRating(0); }}
-              className="mt-6 text-[10px] uppercase font-black tracking-widest text-[#FF6B00] font-display hover:underline"
-            >
-              New Response
-            </button>
-          </motion.div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function FoodCardGallery({ images, name, restaurantId, itemId }: { images?: string[], name: string, restaurantId: string, itemId: string }) {
   const [index, setIndex] = useState(0);
   const navigate = useNavigate();
@@ -247,6 +348,35 @@ function FoodCardGallery({ images, name, restaurantId, itemId }: { images?: stri
         ))}
       </div>
     </div>
+  );
+}
+
+function AddToCartButton({ item, addToCart, primaryColor, t }: { item: MenuItem, addToCart: (item: MenuItem) => void, primaryColor: string, t: any }) {
+  const [added, setAdded] = useState(false);
+  
+  const handleAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    playClick();
+    addToCart(item);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
+
+  return (
+    <button 
+      onClick={handleAdd}
+      className={cn(
+        "px-6 py-2.5 rounded-2xl text-xs font-black shadow-xl active:scale-95 transition-all flex items-center justify-center min-w-[80px]",
+        added ? "bg-green-500" : "text-white"
+      )}
+      style={{ 
+        backgroundColor: added ? undefined : primaryColor, 
+        boxShadow: added ? `0 8px 15px -4px rgba(34, 197, 94, 0.4)` : `0 8px 20px -4px ${primaryColor}66` 
+      }}
+    >
+      {added ? <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }}><CheckCircle2 size={16} /></motion.div> : t.add}
+    </button>
   );
 }
 
@@ -668,18 +798,7 @@ export function MenuPage() {
                         </div>
                         <div className="flex items-center justify-between mt-3">
                           <span className="font-black text-lg text-[#111] font-display">₹{item.price}</span>
-                          <button 
-                            onClick={(e) => { 
-                              e.preventDefault(); 
-                              e.stopPropagation(); 
-                              playClick(); 
-                              addToCart(item);
-                            }}
-                            className="text-white px-6 py-2.5 rounded-2xl text-xs font-black shadow-xl active:scale-95 transition-all"
-                            style={{ backgroundColor: '#FF2A00', boxShadow: `0 8px 20px -4px rgba(255, 42, 0, 0.4)` }}
-                          >
-                            {t.add}
-                          </button>
+                          <AddToCartButton item={item} addToCart={addToCart} primaryColor={primaryColor} t={t} />
                         </div>
                       </Link>
                     </motion.div>
@@ -688,9 +807,13 @@ export function MenuPage() {
               </div>
             </div>
             {/* Intelligent Review Section */}
-            {restaurant.googleReviewLink && (
-              <ReviewPrompt googleLink={restaurant.googleReviewLink} />
+            {(activeTab === 'menu' || activeTab === 'offers') && (
+              <div className="pt-12 px-4">
+                <ReviewSection restaurant={restaurant} primaryColor={primaryColor} />
+              </div>
             )}
+            
+            <RestaurantFooter restaurant={restaurant} primaryColor={primaryColor} />
           </div>
         )}
 
@@ -748,7 +871,7 @@ export function MenuPage() {
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                    <Settings className="text-[#FF6B00]" />
+                    <Settings style={{ color: primaryColor }} />
                   </div>
                   <div>
                     <h3 className="font-black text-lg">Admin Dashboard</h3>
@@ -763,13 +886,13 @@ export function MenuPage() {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-gray-800">Hyper-Speed Browsing</span>
-                    <div className="w-12 h-6 bg-[#FF6B00] rounded-full relative">
+                    <div className="w-12 h-6 rounded-full relative" style={{ backgroundColor: primaryColor }}>
                       <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-gray-800">Neural Recommendations</span>
-                    <div className="w-12 h-6 bg-[#FF6B00] rounded-full relative">
+                    <div className="w-12 h-6 rounded-full relative" style={{ backgroundColor: primaryColor }}>
                       <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
                     </div>
                   </div>

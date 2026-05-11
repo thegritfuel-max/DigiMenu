@@ -5,7 +5,7 @@ import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, addDoc, order
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { Restaurant, Category, MenuItem, Order, OrderStatus, OperationType, Banner, Offer } from '../types';
 import { handleFirestoreError } from '../lib/dbService';
-import { LayoutDashboard, Utensils, ListFilter, Image as ImageIcon, Settings, Bell, Clock, CheckCircle2, ChevronRight, Plus, Search, Trash2, Tag, Upload, Globe, Star, TrendingUp, Menu, X, LogOut, Lock } from 'lucide-react';
+import { LayoutDashboard, Utensils, ListFilter, Image as ImageIcon, Settings, Bell, Clock, CheckCircle2, ChevronRight, Plus, Search, Trash2, Tag, Upload, Globe, Star, TrendingUp, Menu, X, LogOut, Lock, Instagram, Facebook, Youtube, Linkedin, MessageCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -20,7 +20,6 @@ export function AdminPage() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      setAuthLoading(u === null && false); // Just to satisfy check
       setAuthLoading(false);
     });
     return unsub;
@@ -42,7 +41,11 @@ export function AdminPage() {
     }
   };
 
-  const isAdmin = restaurant?.adminUids?.includes(user?.uid || '');
+  const isAdmin = restaurant && (
+    !restaurant.adminUids || 
+    restaurant.adminUids.length === 0 || 
+    restaurant.adminUids.includes(user?.uid || '')
+  );
   const primaryColor = restaurant?.primaryColor || '#ea580c'; // default orange-600
 
   if (authLoading) {
@@ -130,15 +133,15 @@ export function AdminPage() {
              <SidebarItem onClick={() => setSidebarOpen(false)} to="/settings" icon={<Settings size={20} />} label="Settings" isProminent />
           </div>
 
-          <a 
-            href={`/${restaurantId}`} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5 hover:text-white transition-all mt-4"
+          <Link 
+            to={`/${restaurantId}`} 
+            className="flex items-center gap-3 px-4 py-4 rounded-2xl text-sm font-black bg-[#111111] text-white hover:bg-white/10 transition-all mt-6 shadow-2xl group border border-white/5"
           >
-            <Globe size={20} />
-            View Public Menu
-          </a>
+            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-gray-400 group-hover:text-white transition-colors">
+              <Globe size={18} />
+            </div>
+            Return to Menu
+          </Link>
         </nav>
 
         <div className="mt-auto pt-6">
@@ -206,7 +209,7 @@ export function AdminPage() {
             <Route path="categories" element={<AdminCategories />} />
             <Route path="offers" element={<AdminOffers />} />
             <Route path="banners" element={<AdminBanners />} />
-            <Route path="settings" element={<AdminSettings />} />
+            <Route path="settings" element={<AdminSettings user={user!} />} />
             <Route path="*" element={<div className="flex items-center justify-center h-full text-gray-400 font-black uppercase tracking-[0.5em]">Section Offline</div>} />
           </Routes>
         </div>
@@ -257,7 +260,7 @@ function SidebarItem({ to, icon, label, exact, onClick, isProminent }: { to: str
   );
 }
 
-function AdminSettings() {
+function AdminSettings({ user }: { user: FirebaseUser }) {
   const { restaurantId } = useParams<{ restaurantId: string }>();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(false);
@@ -339,15 +342,87 @@ function AdminSettings() {
                 />
               </div>
             </div>
-             <div>
-              <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block mb-2">Review Link</label>
-              <input 
-                type="text" 
-                value={restaurant.googleReviewLink || ''}
-                onChange={e => setRestaurant({...restaurant, googleReviewLink: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-6 focus:ring-2 focus:ring-orange-500 outline-none text-xs"
-                placeholder="Google Review URL"
-              />
+          </div>
+          <div className="pt-6 border-t border-gray-100 space-y-6">
+            <h4 className="text-[10px] uppercase font-black tracking-widest text-orange-600">Social Integration</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { key: 'instagram', icon: <Instagram size={16} />, label: 'Instagram' },
+                { key: 'facebook', icon: <Facebook size={16} />, label: 'Facebook' },
+                { key: 'youtube', icon: <Youtube size={16} />, label: 'YouTube' },
+                { key: 'linkedin', icon: <Linkedin size={16} />, label: 'LinkedIn' },
+                { key: 'whatsapp', icon: <MessageCircle size={16} />, label: 'WhatsApp (Bot integration)' },
+              ].map(({ key, icon, label }) => (
+                <div key={key}>
+                  <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block mb-2">{label} Profile</label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                      {icon}
+                    </div>
+                    <input 
+                      type="text" 
+                      value={restaurant.socialLinks?.[key as keyof Restaurant['socialLinks']] || ''}
+                      onChange={e => setRestaurant({
+                        ...restaurant, 
+                        socialLinks: { 
+                          ...(restaurant.socialLinks || {}), 
+                          [key]: e.target.value 
+                        }
+                      })}
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 pl-12 pr-6 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-xs"
+                      placeholder={`Paste ${label} link...`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-6 border-t border-gray-100 space-y-4">
+               <div>
+                  <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block mb-2">Restaurant Branding (Logo)</label>
+                  <div className="flex gap-4">
+                     <input 
+                        className="flex-1 bg-gray-50 border-none rounded-2xl py-4 px-6 text-xs text-blue-600" 
+                        value={restaurant.logoUrl || ''} 
+                        onChange={e => setRestaurant({...restaurant, logoUrl: e.target.value})} 
+                        placeholder="Paste logo image URL here..."
+                     />
+                     <label className="flex flex-col items-center justify-center p-2 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-all border-2 border-dashed border-gray-300">
+                        <Upload size={16} className="text-gray-400" />
+                        <input 
+                           type="file" 
+                           className="hidden" 
+                           accept="image/*"
+                           onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                 const reader = new FileReader();
+                                 reader.onloadend = () => setRestaurant({...restaurant, logoUrl: reader.result as string});
+                                 reader.readAsDataURL(file);
+                              }
+                           }}
+                        />
+                     </label>
+                  </div>
+               </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block mb-2">Google Review Link</label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-600">
+                  <Star size={16} fill="currentColor" />
+                </div>
+                <input 
+                  type="text" 
+                  value={restaurant.googleReviewLink || ''}
+                  onChange={e => setRestaurant({...restaurant, googleReviewLink: e.target.value})}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 pl-12 pr-6 focus:ring-2 focus:ring-orange-500 outline-none transition-all text-xs font-bold"
+                  placeholder="https://search.google.com/local/writereview?placeid=..."
+                />
+              </div>
+              <p className="text-[9px] text-gray-400 mt-2 font-medium italic">Used for the smart review generator on the main menu.</p>
             </div>
           </div>
           <div>
@@ -371,8 +446,26 @@ function AdminSettings() {
 
           <div className="pt-6 border-t border-gray-100">
             <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block mb-4">Authorized Admin Clearance (Multiple Accounts)</label>
-            <div className="space-y-3">
-              {(restaurant.adminUids || []).map((uid, index) => (
+            <div className="space-y-4">
+              <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100 space-y-2">
+                <p className="text-[10px] font-black uppercase text-orange-600">Your Neural Identity (UID)</p>
+                <div className="flex items-center justify-between gap-4">
+                  <code className="text-xs font-mono font-bold text-orange-900 break-all">{user?.uid}</code>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(user?.uid || '');
+                      alert('UID copied to clipboard');
+                    }}
+                    className="flex-shrink-0 bg-white text-orange-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm active:scale-95 transition-all"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {(restaurant.adminUids || []).map((uid, index) => (
                 <div key={index} className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
                   <Lock size={16} className="text-gray-400" />
                   <span className="flex-1 text-xs font-mono font-bold truncate">{uid}</span>
@@ -647,7 +740,30 @@ function AdminBanners() {
               <h3 className="text-2xl font-black">Configure Hero</h3>
               <div className="space-y-4">
                  <input placeholder="Headline" className="w-full bg-gray-100 rounded-2xl py-4 px-6 font-bold" value={editingBanner.title} onChange={e => setEditingBanner({...editingBanner, title: e.target.value})} />
-                 <input placeholder="Image URL" className="w-full bg-gray-100 rounded-2xl py-4 px-6 text-xs" value={editingBanner.imageUrl} onChange={e => setEditingBanner({...editingBanner, imageUrl: e.target.value})} />
+                 <div className="flex gap-4">
+                    <input 
+                      placeholder="Image URL" 
+                      className="flex-1 bg-gray-100 rounded-2xl py-4 px-6 text-xs" 
+                      value={editingBanner.imageUrl} 
+                      onChange={e => setEditingBanner({...editingBanner, imageUrl: e.target.value})} 
+                    />
+                    <label className="flex flex-col items-center justify-center p-2 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-all border-2 border-dashed border-gray-300">
+                        <Upload size={16} className="text-gray-400" />
+                        <input 
+                           type="file" 
+                           className="hidden" 
+                           accept="image/*"
+                           onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                 const reader = new FileReader();
+                                 reader.onloadend = () => setEditingBanner({...editingBanner, imageUrl: reader.result as string});
+                                 reader.readAsDataURL(file);
+                              }
+                           }}
+                        />
+                    </label>
+                 </div>
               </div>
               <button onClick={saveBanner} className="w-full bg-black text-white py-5 rounded-[24px] font-black uppercase tracking-widest text-sm">Update Interface</button>
            </div>
@@ -743,12 +859,31 @@ function AdminCategories() {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Image URL (Square 500x500 recommended)</label>
-                  <input 
-                    className="w-full bg-gray-50 border-none rounded-2xl py-4 px-6 text-xs text-blue-600" 
-                    value={editingCat.imageUrl} 
-                    onChange={e => setEditingCat({...editingCat, imageUrl: e.target.value})} 
-                  />
+                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Image URL / Paste Link (Square 500x500 recommended)</label>
+                  <div className="flex gap-4">
+                     <input 
+                        className="flex-1 bg-gray-50 border-none rounded-2xl py-4 px-6 text-xs text-blue-600" 
+                        value={editingCat.imageUrl} 
+                        onChange={e => setEditingCat({...editingCat, imageUrl: e.target.value})} 
+                        placeholder="Paste image URL here..."
+                     />
+                     <label className="flex flex-col items-center justify-center p-2 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-all border-2 border-dashed border-gray-300">
+                        <Upload size={16} className="text-gray-400" />
+                        <input 
+                           type="file" 
+                           className="hidden" 
+                           accept="image/*"
+                           onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                 const reader = new FileReader();
+                                 reader.onloadend = () => setEditingCat({...editingCat, imageUrl: reader.result as string});
+                                 reader.readAsDataURL(file);
+                              }
+                           }}
+                        />
+                     </label>
+                  </div>
                 </div>
               </div>
               <div className="flex gap-4">
@@ -988,7 +1123,16 @@ function AdminMenu() {
                       <img src={editingItem.imageUrl || getFallbackImage(editingItem.name || '')} className="w-full h-full object-cover" />
                       <label className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-center p-6">
                          <Upload size={32} className="text-white mb-3" />
-                         <span className="text-white text-[10px] font-black uppercase tracking-widest leading-tight">Initialize Neural Upload</span>
+                         <span className="text-white text-[10px] font-black uppercase tracking-widest leading-tight">Neural Upload</span>
+                       <div className="mt-4 space-y-1 bg-white p-2 rounded-xl border border-gray-100">
+                          <label className="text-[8px] font-black uppercase text-gray-400 block px-2">Matrix URL</label>
+                          <input 
+                            placeholder="Paste link"
+                            className="w-full bg-transparent border-none rounded-lg py-1 px-2 text-[11px] outline-none"
+                            value={editingItem.imageUrl || ''}
+                            onChange={e => setEditingItem({...editingItem, imageUrl: e.target.value})}
+                          />
+                       </div>
                          <input 
                             type="file" 
                             className="hidden" 
