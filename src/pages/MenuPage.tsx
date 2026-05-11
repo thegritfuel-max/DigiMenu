@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { db, auth } from '../firebase';
 import { doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { Restaurant, Category, MenuItem, Banner, OperationType, Offer } from '../types';
 import { handleFirestoreError } from '../lib/dbService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, ShoppingCart, User, ChevronRight, Star, Clock, Info, Flame, ChevronLeft, Settings, Tag, Home, CheckCircle2 } from 'lucide-react';
+import { Search, ShoppingCart, User, ChevronRight, Star, Clock, Info, Flame, ChevronLeft, Settings, Tag, Home, CheckCircle2, LogIn, Lock } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
@@ -384,6 +384,12 @@ export function MenuPage() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'menu' | 'profile' | 'offers' | 'cart'>('menu');
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (u) => setUser(u));
+    return unsubAuth;
+  }, []);
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -441,8 +447,24 @@ export function MenuPage() {
     return matchesCategory && matchesSearch;
   });
 
+  const handleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      playClick();
+      await signInWithPopup(auth, provider);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const primaryColor = restaurant?.primaryColor || '#FF6B00';
   const t = translations[language];
+
+  const userIsAdmin = user && restaurant && (
+    !restaurant.adminUids || 
+    restaurant.adminUids.length === 0 || 
+    restaurant.adminUids.includes(user.uid)
+  );
 
   if (loading || !isLoaded) {
     return (
@@ -862,52 +884,104 @@ export function MenuPage() {
             </header>
 
             <div className="space-y-4">
-              <Link 
-                to="/admin" 
-                className="flex items-center justify-between p-6 bg-[#111] text-white rounded-[32px] shadow-2xl group hover:scale-[1.02] transition-all"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                    <Settings style={{ color: primaryColor }} />
+              {!user ? (
+                <button 
+                  onClick={handleLogin}
+                  className="w-full flex items-center justify-between p-8 bg-white border-2 border-dashed border-gray-200 rounded-[40px] group hover:border-[#111] transition-all"
+                >
+                  <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:bg-[#111] group-hover:text-white transition-all">
+                      <LogIn size={24} />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="font-black text-xl text-gray-400 group-hover:text-[#111] transition-colors">Admin Login</h3>
+                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Sign in with Google Account</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-black text-lg">Admin Dashboard</h3>
-                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Operation Override</p>
-                  </div>
-                </div>
-                <ChevronRight className="text-gray-500 group-hover:text-white transition-colors" />
-              </Link>
-
-              <div className="p-8 bg-white border border-gray-100 rounded-[40px] space-y-6 shadow-sm">
-                <h3 className="font-black text-xs uppercase tracking-[0.2em] text-gray-400">Environment Controls</h3>
+                  <ChevronRight className="text-gray-200 group-hover:text-[#111] transition-colors" />
+                </button>
+              ) : (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-gray-800">Hyper-Speed Browsing</span>
-                    <div className="w-12 h-6 rounded-full relative" style={{ backgroundColor: primaryColor }}>
-                      <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                  {userIsAdmin ? (
+                    <Link 
+                      to="/admin" 
+                      className="flex items-center justify-between p-6 bg-[#111] text-white rounded-[32px] shadow-2xl group hover:scale-[1.02] transition-all"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                          <Settings style={{ color: primaryColor }} />
+                        </div>
+                        <div>
+                          <h3 className="font-black text-lg text-white">Admin Dashboard</h3>
+                          <p className="text-[#00FF44] text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                            <CheckCircle2 size={10} /> Authorized Clearance
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="text-gray-500 group-hover:text-white transition-colors" />
+                    </Link>
+                  ) : (
+                    <div className="p-8 bg-red-50 border border-red-100 rounded-[40px] space-y-4">
+                       <div className="flex items-center gap-4 text-red-600">
+                          <Lock size={24} />
+                          <div>
+                            <h3 className="font-black text-lg">Access Prohibited</h3>
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Neural ID: {user.uid.slice(0, 8)}...</p>
+                          </div>
+                       </div>
+                       <p className="text-xs font-medium text-red-500 leading-relaxed">
+                          Your account does not have admin clearance for this lab. Request authorization from an existing administrator or check your login.
+                       </p>
+                       <div className="flex items-center gap-3 bg-white p-3 rounded-2xl border border-red-100">
+                          <code className="flex-1 text-[10px] font-mono font-bold text-gray-500 break-all">{user.uid}</code>
+                          <button 
+                            onClick={() => { navigator.clipboard.writeText(user.uid); alert('UID Copied'); }}
+                            className="bg-red-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase"
+                          >Copy</button>
+                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-gray-800">Neural Recommendations</span>
-                    <div className="w-12 h-6 rounded-full relative" style={{ backgroundColor: primaryColor }}>
-                      <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-gray-800">AR Food Visualization</span>
-                    <div className="w-12 h-6 bg-gray-200 rounded-full relative">
-                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  )}
 
-              <button 
-                onClick={() => auth.signOut()}
-                className="w-full p-6 text-red-500 font-black uppercase tracking-widest text-xs hover:bg-red-50 rounded-[28px] transition-colors"
-              >
-                Terminate Session
-              </button>
+                  <div className="p-8 bg-white border border-gray-100 rounded-[40px] space-y-6 shadow-sm">
+                    <div className="flex items-center gap-4 mb-4">
+                       <img src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} className="w-12 h-12 rounded-full border-2 border-gray-100" />
+                       <div>
+                          <h4 className="font-black text-[#111]">{user.displayName || 'Researcher'}</h4>
+                          <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">{user.email}</p>
+                       </div>
+                    </div>
+
+                    <h3 className="font-black text-xs uppercase tracking-[0.2em] text-gray-400">Environment Controls</h3>
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-800">Hyper-Speed Browsing</span>
+                        <div className="w-12 h-6 rounded-full relative" style={{ backgroundColor: primaryColor }}>
+                          <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-800">Neural Recommendations</span>
+                        <div className="w-12 h-6 rounded-full relative" style={{ backgroundColor: primaryColor }}>
+                          <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-800">AR Food Visualization</span>
+                        <div className="w-12 h-6 bg-gray-200 rounded-full relative">
+                          <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => { playClick(); auth.signOut(); }}
+                    className="w-full p-6 text-red-500 font-black uppercase tracking-widest text-xs hover:bg-red-50 rounded-[28px] transition-colors flex items-center justify-center gap-3 border border-red-50"
+                  >
+                    Terminate Session
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

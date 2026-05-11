@@ -58,27 +58,60 @@ export function AdminPage() {
 
   if (!user || !isAdmin) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gray-50 p-6 text-center space-y-6">
-        <div className="w-20 h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center text-orange-500">
-          <Lock size={40} />
+      <div className="h-screen flex flex-col items-center justify-center bg-gray-50 p-6 text-center space-y-10">
+        <div className="relative">
+          <div className="w-24 h-24 bg-white rounded-[40px] shadow-2xl flex items-center justify-center text-[#111] border border-gray-100 z-10 relative">
+            <Lock size={44} strokeWidth={1.5} />
+          </div>
+          <div className="absolute -inset-4 bg-orange-500/10 rounded-full blur-3xl animate-pulse" />
         </div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-black uppercase tracking-tight">Operation Locked</h1>
-          <p className="text-gray-500 text-sm max-w-xs">You need authorized neural clearance to access this lab interface.</p>
+
+        <div className="space-y-4 max-w-sm">
+          <h1 className="text-3xl font-black uppercase tracking-tighter text-[#111]">Secure Terminal</h1>
+          <p className="text-gray-500 text-sm font-medium leading-relaxed">
+            Authorized personnel only. Access to this administrative node requires verified neural clearance.
+          </p>
         </div>
+
         {!user ? (
-          <button 
-            onClick={handleLogin}
-            className="flex items-center gap-3 bg-white border border-gray-200 px-8 py-4 rounded-2xl shadow-sm hover:shadow-md transition-all font-bold"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" />
-            Admin Login
-          </button>
+          <div className="space-y-6 w-full max-w-xs">
+            <button 
+              onClick={handleLogin}
+              className="w-full flex items-center justify-center gap-4 bg-white border border-gray-200 px-8 py-5 rounded-[24px] shadow-sm hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all font-black uppercase tracking-widest text-xs text-[#111]"
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" />
+              Sign in with Google
+            </button>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
+              Use the primary administrator account associated with this laboratory.
+            </p>
+          </div>
         ) : (
-          <div className="space-y-4">
-             <p className="text-red-500 text-xs font-black uppercase tracking-widest">Access Denied for {user.email}</p>
-             <button onClick={() => auth.signOut()} className="text-gray-400 font-bold flex items-center gap-2 mx-auto">
-                <LogOut size={16} /> Sign out
+          <div className="space-y-8 w-full max-w-sm">
+             <div className="p-8 bg-red-50 border border-red-100 rounded-[40px] space-y-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                   <Lock size={80} />
+                </div>
+                <div className="space-y-2 relative">
+                  <p className="text-red-600 text-[10px] font-black uppercase tracking-[0.3em]">Clearance Denied</p>
+                  <p className="text-red-900 font-bold text-sm">Neural identity {user.email} is not authorized for this node.</p>
+                </div>
+                
+                <div className="pt-4 space-y-3">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Your Neural CID (UID):</p>
+                  <div className="flex items-center gap-3 bg-white p-4 rounded-2xl border border-red-100 shadow-inner">
+                    <code className="flex-1 text-[10px] font-mono font-bold text-gray-600 break-all text-left">{user.uid}</code>
+                    <button 
+                      onClick={() => { navigator.clipboard.writeText(user.uid); alert('UID Copied'); }}
+                      className="bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-red-200"
+                    >Copy</button>
+                  </div>
+                  <p className="text-[9px] text-gray-400 italic">Provide this CID to an existing Master Admin to grant access via Settings.</p>
+                </div>
+             </div>
+
+             <button onClick={() => auth.signOut()} className="text-gray-400 font-black text-[10px] uppercase tracking-widest flex items-center gap-3 mx-auto hover:text-black transition-colors">
+                <LogOut size={16} /> Terminate Request & Sign Out
              </button>
           </div>
         )}
