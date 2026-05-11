@@ -8,10 +8,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, Share2, Heart, Star, Clock, Flame, Info, Check, Plus, Minus, ChevronRight, X, Box, Maximize2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
+const playClick = () => {
+  const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
+  audio.volume = 0.2;
+  audio.play().catch(() => {});
+};
+
 function DetailGallery({ images, name }: { images?: string[], name: string }) {
   const [index, setIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
-  const displayImages = (images && images.length > 0) ? images : ['https://via.placeholder.com/800'];
+  const displayImages = (images && images.length > 0) ? images : ['https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=1000'];
 
   return (
     <>
@@ -159,16 +165,16 @@ export function ItemDetailPage() {
       <div className="relative h-[50vh] bg-gray-100 overflow-hidden">
         <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-6">
           <button 
-            onClick={() => navigate(-1)}
+            onClick={() => { playClick(); navigate(-1); }}
             className="w-12 h-12 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md text-black shadow-lg border border-white/50"
           >
             <ChevronLeft size={24} />
           </button>
           <div className="flex gap-3">
-            <button className="w-12 h-12 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md text-black shadow-lg border border-white/50">
+            <button onClick={playClick} className="w-12 h-12 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md text-black shadow-lg border border-white/50">
               <Share2 size={20} />
             </button>
-            <button className="w-12 h-12 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md text-black shadow-lg border border-white/50">
+            <button onClick={playClick} className="w-12 h-12 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md text-black shadow-lg border border-white/50">
               <Heart size={20} />
             </button>
           </div>
@@ -242,7 +248,14 @@ export function ItemDetailPage() {
         {/* AR Entry Point */}
         <div className="pt-2">
           <button 
-            onClick={() => setShowAR(true)}
+            onClick={() => {
+              playClick();
+              if (item.arModelUrl) {
+                window.open(item.arModelUrl, '_blank');
+              } else {
+                setShowAR(true);
+              }
+            }}
             className="w-full flex items-center justify-between p-6 bg-gradient-to-r from-[#FF6B00] to-[#FF8A00] text-white rounded-[32px] shadow-xl shadow-orange-500/20 group relative overflow-hidden"
           >
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
@@ -251,8 +264,10 @@ export function ItemDetailPage() {
                 <Box size={24} className="animate-bounce" />
               </div>
               <div className="text-left">
-                <h4 className="font-black text-sm uppercase tracking-widest leading-none mb-1">3D / AR Preview</h4>
-                <p className="text-white/70 text-[10px] font-bold">Visualize quantity on your table</p>
+                <h4 className="font-black text-sm uppercase tracking-widest leading-none mb-1">AR Visualize Food</h4>
+                <p className="text-white/70 text-[10px] font-bold">
+                  {item.arModelUrl ? "Launch Immersion Mode" : "System Generating Visualizer"}
+                </p>
               </div>
             </div>
             <Maximize2 size={24} className="text-white/50 group-hover:text-white transition-colors relative z-10" />
@@ -263,20 +278,20 @@ export function ItemDetailPage() {
         <div className="pt-4 flex items-center gap-4">
           <div className="flex items-center bg-[#F8F8F8] rounded-[20px] p-1.5 border border-gray-100 shadow-inner">
             <button 
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              onClick={() => { playClick(); setQuantity(Math.max(1, quantity - 1)); }}
               className="w-12 h-12 flex items-center justify-center text-gray-400 transition-colors hover:text-[#111]"
             >
               <Minus size={20} />
             </button>
             <span className="w-8 text-center font-black text-lg">{quantity}</span>
             <button 
-              onClick={() => setQuantity(quantity + 1)}
+              onClick={() => { playClick(); setQuantity(quantity + 1); }}
               className="w-12 h-12 flex items-center justify-center text-[#FF6B00] transition-colors hover:text-[#111]"
             >
               <Plus size={20} />
             </button>
           </div>
-          <button className="flex-1 bg-[#FF6B00] text-white h-14 rounded-[20px] font-black shadow-xl shadow-[#FF6B00]/20 active:scale-95 transition-all uppercase tracking-widest text-sm">
+          <button onClick={playClick} className="flex-1 bg-[#FF6B00] text-white h-14 rounded-[20px] font-black shadow-xl shadow-[#FF6B00]/20 active:scale-95 transition-all uppercase tracking-widest text-sm">
             Add to Order • ₹{item.price * quantity}
           </button>
         </div>

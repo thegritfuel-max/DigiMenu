@@ -13,6 +13,7 @@ export interface Restaurant {
   googleReviewLink?: string;
   suggestedReviews?: string[];
   adminUids: string[];
+  language?: 'en' | 'mr';
 }
 
 export interface Category {
@@ -47,6 +48,17 @@ export interface Banner {
   title?: string;
   subtitle?: string;
   ctaLink?: string;
+  order: number;
+}
+
+export interface Offer {
+  id: string;
+  imageUrl: string;
+  title: string;
+  discountCode?: string;
+  discountPercentage?: number;
+  description?: string;
+  expiryDate?: string;
   order: number;
 }
 

@@ -60,6 +60,20 @@
       },
       "required": ["imageUrl"]
     },
+    "Offer": {
+      "title": "Offer",
+      "description": "Zomato-style offer banners",
+      "type": "object",
+      "properties": {
+        "imageUrl": { "type": "string" },
+        "title": { "type": "string" },
+        "discountCode": { "type": "string" },
+        "description": { "type": "string" },
+        "expiryDate": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["imageUrl", "title"]
+    },
     "Order": {
       "title": "Order",
       "description": "Customer order",
@@ -102,6 +116,10 @@
     "/restaurants/{restaurantId}/banners/{bannerId}": {
       "schema": "Banner",
       "description": "Promotional banners"
+    },
+    "/restaurants/{restaurantId}/offers/{offerId}": {
+      "schema": "Offer",
+      "description": "Zomato-style horizontal offers"
     },
     "/restaurants/{restaurantId}/orders/{orderId}": {
       "schema": "Order",

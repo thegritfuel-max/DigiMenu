@@ -47,8 +47,13 @@ service cloud.firestore {
       allow update: if isSignedIn() && 
                     existing().get('adminUids', []).size() > 0 && 
                     request.auth.uid in existing().adminUids && (
-                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'logoUrl', 'primaryColor', 'accentColor', 'googleReviewLink', 'suggestedReviews', 'adminUids'])
+                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'logoUrl', 'primaryColor', 'accentColor', 'googleReviewLink', 'suggestedReviews', 'adminUids', 'language'])
                     );
+
+      match /offers/{offerId} {
+        allow read: if true;
+        allow write: if isAdmin(restaurantId);
+      }
 
       match /categories/{categoryId} {
         allow read: if true;

@@ -3,21 +3,121 @@ import { useParams, Link } from 'react-router-dom';
 import { db, auth } from '../firebase';
 import { doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { Restaurant, Category, MenuItem, Banner, OperationType } from '../types';
+import { Restaurant, Category, MenuItem, Banner, OperationType, Offer } from '../types';
 import { handleFirestoreError } from '../lib/dbService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, ShoppingCart, User, ChevronRight, Star, Clock, Info, Flame, ChevronLeft, Settings, Tag, Home } from 'lucide-react';
+import { Search, ShoppingCart, User, ChevronRight, Star, Clock, Info, Flame, ChevronLeft, Settings, Tag, Home, CheckCircle2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
+
+const translations = {
+  en: {
+    search: "Search for dishes, cafes...",
+    categories: "Categories",
+    seeAll: "See all",
+    popular: "Popular",
+    trending: "Trending Now",
+    artisanal: "Artisanal Selections",
+    live: "Live Inventory",
+    add: "ADD",
+    home: "Home",
+    offers: "Offers",
+    cart: "Cart",
+    profile: "Profile",
+    decentralized: "Decentralized Kitchen Lab",
+    specialRewards: "Exclusive Node Rewards",
+    rewardSubtitle: "Hyper-personalized offers for your current session.",
+    apply: "Apply Node",
+    trendingTag: "Hot 🔥"
+  },
+  mr: {
+    search: "पदार्थ, कॅफे शोधा...",
+    categories: "श्रेणी",
+    seeAll: "सर्व पहा",
+    popular: "लोकप्रिय",
+    trending: "सध्या ट्रेंडिंग",
+    artisanal: "विशेष निवड",
+    live: "थेट साठा",
+    add: "जोडा",
+    home: "मुख्य",
+    offers: "ऑफर्स",
+    cart: "कार्ट",
+    profile: "प्रोफाइल",
+    decentralized: "विकेंद्रित किचन लॅब",
+    specialRewards: "विशेष बक्षिसे",
+    rewardSubtitle: "तुमच्या सध्याच्या सत्रासाठी विशेष ऑफर.",
+    apply: "कोड वापरा",
+    trendingTag: "गरम 🔥"
+  }
+};
+
+const playClick = () => {
+  const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
+  audio.volume = 0.2;
+  audio.play().catch(() => {}); // Ignore silent errors
+};
+
+function SplashScreen({ restaurant }: { restaurant: Restaurant }) {
+  useEffect(() => {
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audio.volume = 0.3;
+    audio.play().catch(() => {});
+  }, []);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[1000] bg-white flex flex-col items-center justify-center p-8 space-y-8"
+    >
+      <motion.div 
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5, type: "spring" }}
+        className="w-32 h-32 rounded-[40px] bg-white shadow-2xl flex items-center justify-center overflow-hidden border border-gray-100"
+      >
+        <img src={restaurant.logoUrl || "https://api.dicebear.com/7.x/initials/svg?seed=" + restaurant.name} className="w-20 h-20 object-contain" />
+      </motion.div>
+      <div className="text-center space-y-2">
+        <motion.h1 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-2xl font-black font-display tracking-tight uppercase"
+        >
+          {restaurant.name}
+        </motion.h1>
+        <motion.p 
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.4em]"
+        >
+          Initializing Interface...
+        </motion.p>
+      </div>
+      <div className="absolute bottom-12 flex gap-2">
+        <div className="w-2 h-2 rounded-full bg-black/10 animate-bounce" style={{ animationDelay: '0s' }} />
+        <div className="w-2 h-2 rounded-full bg-black/10 animate-bounce" style={{ animationDelay: '0.2s' }} />
+        <div className="w-2 h-2 rounded-full bg-black/10 animate-bounce" style={{ animationDelay: '0.4s' }} />
+      </div>
+    </motion.div>
+  );
+}
 
 function ReviewPrompt({ googleLink }: { googleLink: string }) {
   const [rating, setRating] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [internalRating, setInternalRating] = useState<number>(0);
 
-  const handleReview = (val: number) => {
-    setRating(val);
-    if (val >= 4) {
-      window.open(googleLink, '_blank');
+  const handleSubmit = () => {
+    if (internalRating === 0) return;
+    setRating(internalRating);
+    if (internalRating >= 4) {
+      setTimeout(() => {
+        window.open(googleLink, '_blank');
+      }, 1000);
     }
     setSubmitted(true);
   };
@@ -34,26 +134,36 @@ function ReviewPrompt({ googleLink }: { googleLink: string }) {
               {[1, 2, 3, 4, 5].map((star) => (
                 <button 
                   key={star} 
-                  onClick={() => handleReview(star)}
+                  onClick={() => { playClick(); setInternalRating(star); }}
                   className="p-2 transition-all hover:scale-125"
                 >
                   <Star 
                     size={32} 
                     className={cn(
                       "transition-all",
-                      rating && rating >= star ? "fill-[#FF6B00] text-[#FF6B00]" : "text-gray-600"
+                      internalRating >= star ? "fill-[#FF6B00] text-[#FF6B00]" : "text-gray-600"
                     )} 
                   />
                 </button>
               ))}
             </div>
+            <button 
+              onClick={handleSubmit}
+              disabled={internalRating === 0}
+              className="w-full bg-[#FF6B00] text-white py-4 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+            >
+              Submit Feedback
+            </button>
           </div>
         ) : (
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="space-y-4"
+            className="space-y-4 text-center py-4"
           >
+            <div className="w-16 h-16 bg-[#FF6B00]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+               <CheckCircle2 className="text-[#FF6B00]" size={32} />
+            </div>
             <h3 className="text-2xl font-black font-display tracking-tight leading-tight">
               {rating! >= 4 ? "Redirecting to Google..." : "Thank you for the data."}
             </h3>
@@ -63,10 +173,10 @@ function ReviewPrompt({ googleLink }: { googleLink: string }) {
                 : "Our systems will analyze your feedback for manual recalibration."}
             </p>
             <button 
-              onClick={() => setSubmitted(false)}
-              className="mt-4 text-[10px] uppercase font-black tracking-widest text-[#FF6B00] hover:underline"
+              onClick={() => { playClick(); setSubmitted(false); setInternalRating(0); }}
+              className="mt-6 text-[10px] uppercase font-black tracking-widest text-[#FF6B00] font-display hover:underline"
             >
-              Update Rating
+              New Response
             </button>
           </motion.div>
         )}
@@ -78,12 +188,20 @@ function ReviewPrompt({ googleLink }: { googleLink: string }) {
 function FoodCardGallery({ images, name, restaurantId, itemId }: { images?: string[], name: string, restaurantId: string, itemId: string }) {
   const [index, setIndex] = useState(0);
   const navigate = useNavigate();
-  const displayImages = (images && images.length > 0) ? images : ['https://via.placeholder.com/400'];
+  const [error, setError] = useState(false);
+  const displayImages = (images && images.length > 0 && !error) 
+    ? images 
+    : ['https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=800'];
 
   if (displayImages.length <= 1) {
     return (
       <Link to={`/${restaurantId}/item/${itemId}`} className="block w-full h-full">
-        <img src={displayImages[0]} alt={name} className="w-full h-full object-cover" />
+        <img 
+          src={displayImages[0]} 
+          alt={name} 
+          className="w-full h-full object-cover" 
+          onError={() => setError(true)}
+        />
       </Link>
     );
   }
@@ -101,6 +219,7 @@ function FoodCardGallery({ images, name, restaurantId, itemId }: { images?: stri
             alt={`${name} ${i}`}
             className="w-full h-full object-cover flex-shrink-0 cursor-pointer"
             onClick={() => navigate(`/${restaurantId}/item/${itemId}`)}
+            onError={() => setError(true)}
           />
         ))}
       </div>
@@ -134,11 +253,15 @@ function FoodCardGallery({ images, name, restaurantId, itemId }: { images?: stri
 export function MenuPage() {
   const { restaurantId } = useParams<{ restaurantId: string }>();
   const navigate = useNavigate();
+  const { addToCart, cartItems } = useCart();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
+  const [language, setLanguage] = useState<'en' | 'mr'>('en');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'menu' | 'profile' | 'offers' | 'cart'>('menu');
@@ -149,7 +272,9 @@ export function MenuPage() {
     const resRef = doc(db, 'restaurants', restaurantId);
     const unsubRes = onSnapshot(resRef, (doc) => {
       if (doc.exists()) {
-        setRestaurant({ id: doc.id, ...doc.data() } as Restaurant);
+        const data = doc.data() as Restaurant;
+        setRestaurant({ id: doc.id, ...data } as Restaurant);
+        if (data.language) setLanguage(data.language);
       }
       setLoading(false);
     }, (error) => handleFirestoreError(error, OperationType.GET, `restaurants/${restaurantId}`));
@@ -171,11 +296,22 @@ export function MenuPage() {
       setBanners(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Banner)));
     }, (error) => handleFirestoreError(error, OperationType.LIST, `banners`));
 
+    const offerRef = collection(db, 'restaurants', restaurantId, 'offers');
+    const qOffer = query(offerRef, orderBy('order', 'asc'));
+    const unsubOffers = onSnapshot(qOffer, (snapshot) => {
+      setOffers(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Offer)));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, `offers`));
+
+    // Splash timeout
+    const timer = setTimeout(() => setShowSplash(false), 2500);
+
     return () => {
       unsubRes();
       unsubCat();
       unsubItems();
       unsubBanners();
+      unsubOffers();
+      clearTimeout(timer);
     };
   }, [restaurantId]);
 
@@ -186,14 +322,21 @@ export function MenuPage() {
     return matchesCategory && matchesSearch;
   });
 
+  const primaryColor = restaurant?.primaryColor || '#FF6B00';
+  const t = translations[language];
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <motion.div 
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-          className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full"
-        />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white">
+        <div className="relative w-16 h-16">
+          <div className="absolute inset-0 border-4 border-gray-100 rounded-full" />
+          <motion.div 
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+            className="absolute inset-0 border-4 border-[#FF6B00] border-t-transparent rounded-full"
+          />
+        </div>
+        <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Syncing Nodes...</p>
       </div>
     );
   }
@@ -212,6 +355,10 @@ export function MenuPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] pb-24 select-none">
+      <AnimatePresence>
+        {showSplash && <SplashScreen restaurant={restaurant} />}
+      </AnimatePresence>
+
       {/* Header */}
       <header className="sticky top-0 z-50 glass-morphism px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -229,18 +376,32 @@ export function MenuPage() {
               {restaurant.name}
             </h1>
             <p className="text-[8px] text-gray-400 flex items-center gap-1 font-black uppercase tracking-[0.2em]">
-              Decentralized Kitchen Lab
+              {t.decentralized}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Link to={`/${restaurantId}/cart`} className="relative w-10 h-10 flex items-center justify-center rounded-full bg-white text-[#111111] shadow-sm border border-gray-100">
-            <ShoppingCart size={20} />
-            <span className="absolute -top-1 -right-1 bg-[#FF6B00] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">2</span>
-          </Link>
-          <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white text-[#111111] shadow-sm border border-gray-100">
-            <User size={20} />
+          <button 
+            onClick={() => { playClick(); setLanguage(language === 'en' ? 'mr' : 'en'); }}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white text-[#111111] shadow-sm border border-gray-100 font-bold text-xs"
+          >
+            {language === 'en' ? 'मरा' : 'EN'}
           </button>
+          <Link 
+            to={`/${restaurantId}/cart`} 
+            onClick={playClick} 
+            className="relative w-10 h-10 flex items-center justify-center rounded-full bg-white text-[#111111] shadow-sm border border-gray-100"
+          >
+            <ShoppingCart size={20} />
+            {cartItems.length > 0 && (
+              <span 
+                className="absolute -top-1 -right-1 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold animate-in zoom-in"
+                style={{ backgroundColor: primaryColor }}
+              >
+                {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
+              </span>
+            )}
+          </Link>
         </div>
       </header>
 
@@ -248,17 +409,90 @@ export function MenuPage() {
       <main className="px-4 py-4 space-y-6">
         {activeTab === 'menu' && (
           <div className="space-y-6 animate-in fade-in duration-500">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search for dishes, cafes..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white border border-gray-100 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-[#FF6B00] shadow-sm transition-all outline-none text-[#111111]"
-              />
+            {/* Search Bar & Suggestions */}
+            <div className="relative z-50">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input 
+                  type="text" 
+                  placeholder={t.search} 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => playClick()}
+                  className="w-full bg-white border border-gray-100 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 shadow-sm transition-all outline-none text-[#111111]"
+                  style={{ borderColor: `${primaryColor}33` }}
+                />
+              </div>
+
+              {/* Suggestions Dropdown */}
+              <AnimatePresence>
+                {searchQuery.length > 1 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden z-[100]"
+                  >
+                    <div className="p-2 max-h-[320px] overflow-y-auto hide-scrollbar">
+                      <p className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-gray-400">Predicted Selections</p>
+                      {menuItems
+                        .filter(item => 
+                          item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          item.description.toLowerCase().includes(searchQuery.toLowerCase())
+                        )
+                        .slice(0, 6)
+                        .map(item => (
+                          <div 
+                            key={item.id}
+                            onClick={() => {
+                              playClick();
+                              setSearchQuery('');
+                              navigate(`/${restaurantId}/item/${item.id}`);
+                            }}
+                            className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer transition-colors group"
+                          >
+                            <img src={item.imageUrl} className="w-10 h-10 rounded-xl object-cover" />
+                            <div className="flex-1">
+                              <h4 className="font-bold text-sm group-hover:text-[#FF6B00] transition-colors">{item.name}</h4>
+                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">₹{item.price}</p>
+                            </div>
+                            <ChevronRight size={14} className="text-gray-300" />
+                          </div>
+                        ))
+                      }
+                      {menuItems.filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                        <div className="p-8 text-center space-y-2">
+                           <Search className="mx-auto text-gray-200" size={32} />
+                           <p className="text-xs font-bold text-gray-400">No nodes found matching your query.</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
+
+            {/* Zomato Style Offers - Curved Rectangular */}
+            {offers.length > 0 && activeCategory === 'all' && !searchQuery && (
+              <div className="space-y-4">
+                 <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 hide-scrollbar snap-x">
+                   {offers.map((offer) => (
+                      <motion.div 
+                        key={offer.id}
+                        className="min-w-[280px] aspect-[16/7] rounded-[32px] overflow-hidden bg-white shadow-xl relative snap-center border border-gray-100"
+                        whileTap={{ scale: 0.98 }}
+                        onClick={playClick}
+                      >
+                         <img src={offer.imageUrl} className="w-full h-full object-cover" />
+                         <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent p-6 flex flex-col justify-center">
+                            <h3 className="text-white font-black text-xl leading-none mb-1">{offer.title}</h3>
+                            <p className="text-xs font-black tracking-widest uppercase" style={{ color: primaryColor }}>{offer.discountCode}</p>
+                         </div>
+                      </motion.div>
+                   ))}
+                 </div>
+              </div>
+            )}
 
             {/* Banners - Auto Sliding */}
             {banners.length > 0 && (
@@ -293,14 +527,14 @@ export function MenuPage() {
             {/* Categories */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold font-display">Categories</h2>
-                <button className="text-[#FF6B00] text-sm font-bold flex items-center">
-                  See all <ChevronRight size={16} />
+                <h2 className="text-xl font-bold font-display">{t.categories}</h2>
+                <button onClick={playClick} className="text-[#FF6B00] text-sm font-bold flex items-center">
+                  {t.seeAll} <ChevronRight size={16} />
                 </button>
               </div>
               <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 hide-scrollbar">
                 <button 
-                  onClick={() => setActiveCategory('all')}
+                  onClick={() => { playClick(); setActiveCategory('all'); }}
                   className={cn(
                     "flex flex-col items-center gap-2 min-w-[72px] transition-all",
                     activeCategory === 'all' ? "scale-105" : "opacity-60"
@@ -312,12 +546,12 @@ export function MenuPage() {
                   )}>
                     <Flame size={24} />
                   </div>
-                  <span className="text-[11px] font-bold">Popular</span>
+                  <span className="text-[11px] font-bold">{t.popular}</span>
                 </button>
                 {categories.map((cat) => (
                   <button 
                     key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
+                    onClick={() => { playClick(); setActiveCategory(cat.id); }}
                     className={cn(
                       "flex flex-col items-center gap-2 min-w-[72px] transition-all",
                       activeCategory === cat.id ? "scale-105" : "opacity-60"
@@ -339,8 +573,13 @@ export function MenuPage() {
             {menuItems.some(i => i.isTrending) && activeCategory === 'all' && !searchQuery && (
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold font-display">Trending Now</h2>
-                  <div className="bg-[#FF6B00]/10 text-[#FF6B00] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Hot 🔥</div>
+                  <h2 className="text-xl font-bold font-display">{t.trending}</h2>
+                  <div 
+                    className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"
+                    style={{ backgroundColor: `${primaryColor}1A`, color: primaryColor }}
+                  >
+                    {t.trendingTag}
+                  </div>
                 </div>
                 <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 hide-scrollbar snap-x">
                   {menuItems.filter(i => i.isTrending).map((item) => (
@@ -348,6 +587,7 @@ export function MenuPage() {
                       key={item.id}
                       className="min-w-[200px] bg-white rounded-[28px] overflow-hidden shadow-xl border border-gray-100 snap-center"
                       whileTap={{ scale: 0.95 }}
+                      onClick={playClick}
                     >
                       <Link to={`/${restaurantId}/item/${item.id}`}>
                         <div className="aspect-square relative">
@@ -355,7 +595,7 @@ export function MenuPage() {
                         </div>
                         <div className="p-4 space-y-1">
                           <h4 className="font-bold text-sm truncate">{item.name}</h4>
-                          <p className="text-[#FF6B00] font-black text-xs">₹{item.price}</p>
+                          <p className="font-black text-xs" style={{ color: primaryColor }}>₹{item.price}</p>
                         </div>
                       </Link>
                     </motion.div>
@@ -367,10 +607,10 @@ export function MenuPage() {
             {/* Menu Items */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold font-display tracking-tight text-[#111]">Artisanal Selections</h2>
+                <h2 className="text-xl font-bold font-display tracking-tight text-[#111]">{t.artisanal}</h2>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-[#FF6B00] animate-pulse" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#FF6B00]">Live Inventory</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#FF6B00]">{t.live}</span>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -384,6 +624,7 @@ export function MenuPage() {
                       exit={{ opacity: 0, scale: 0.9 }}
                       whileHover={{ y: -4, scale: 1.01, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
                       className="bg-white rounded-[24px] p-4 flex gap-4 transition-all border border-gray-100 shadow-sm overflow-hidden"
+                      onClick={playClick}
                     >
                       <div className="relative w-28 h-28 rounded-[16px] overflow-hidden flex-shrink-0 bg-gray-100">
                         <FoodCardGallery 
@@ -393,7 +634,10 @@ export function MenuPage() {
                           itemId={item.id} 
                         />
                         {item.isBestseller && (
-                          <div className="absolute top-2 left-2 bg-[#FF6B00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest">
+                          <div 
+                            className="absolute top-2 left-2 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest"
+                            style={{ backgroundColor: primaryColor }}
+                          >
                             Bestseller
                           </div>
                         )}
@@ -415,7 +659,7 @@ export function MenuPage() {
                           <p className="text-[11px] text-gray-500 line-clamp-2 mb-2 leading-relaxed">{item.description}</p>
                           <div className="flex items-center gap-3">
                             <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
-                              <Star size={12} className="fill-[#FF6B00] text-[#FF6B00]" /> {item.rating || 4.5}
+                              <Star size={12} className="fill-current" style={{ color: primaryColor }} /> {item.rating || 4.5}
                             </span>
                             <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
                               <Clock size={12} /> 15-20 min
@@ -425,10 +669,16 @@ export function MenuPage() {
                         <div className="flex items-center justify-between mt-2">
                           <span className="font-black text-lg text-[#111] font-display">₹{item.price}</span>
                           <button 
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); /* handle add to cart */ }}
-                            className="bg-[#FF6B00] text-white px-5 py-2 rounded-[12px] text-xs font-black shadow-lg shadow-[#FF6B00]/20 active:scale-95 transition-all"
+                            onClick={(e) => { 
+                              e.preventDefault(); 
+                              e.stopPropagation(); 
+                              playClick(); 
+                              addToCart(item);
+                            }}
+                            className="text-white px-5 py-2 rounded-[12px] text-xs font-black shadow-lg active:scale-95 transition-all"
+                            style={{ backgroundColor: primaryColor, boxShadow: `0 10px 15px -3px ${primaryColor}33` }}
                           >
-                            ADD
+                            {t.add}
                           </button>
                         </div>
                       </Link>
@@ -448,17 +698,17 @@ export function MenuPage() {
         {activeTab === 'offers' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <header className="space-y-2">
-              <h1 className="text-3xl font-black font-display text-[#111]">Exclusive Node Rewards</h1>
-              <p className="text-gray-500 font-medium">Hyper-personalized offers for your current session.</p>
+              <h1 className="text-3xl font-black font-display text-[#111]">{t.specialRewards}</h1>
+              <p className="text-gray-500 font-medium">{t.rewardSubtitle}</p>
             </header>
 
             <div className="grid gap-6">
-              {[
-                { title: 'Neural First Order', discount: '₹150 OFF', code: 'SCALORA150', color: 'bg-black text-white' },
-                { title: 'Social Proof Reward', discount: 'Free Dessert', code: 'REVIEW_LAB', color: 'bg-[#FF6B00] text-white' },
-                { title: 'Coastal Selection', discount: '20% Special', code: 'MAFIA20', color: 'bg-white border border-gray-100 text-[#111]' }
-              ].map((offer, i) => (
-                <div key={i} className={cn("p-8 rounded-[40px] relative overflow-hidden group shadow-lg", offer.color)}>
+              {offers.map((offer, i) => (
+                <div 
+                  key={offer.id} 
+                  className={cn("p-8 rounded-[40px] relative overflow-hidden group shadow-lg")}
+                  style={{ backgroundColor: i % 2 === 0 ? '#111' : primaryColor, color: 'white' }}
+                >
                   <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8" />
                   <div className="relative z-10 space-y-4">
                     <div className="flex items-center justify-between">
@@ -468,13 +718,13 @@ export function MenuPage() {
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-3xl font-black font-display leading-tight">{offer.discount}</h3>
-                      <p className="font-bold opacity-70 uppercase tracking-widest text-[10px]">{offer.title}</p>
+                      <h3 className="text-3xl font-black font-display leading-tight">{offer.title}</h3>
+                      <p className="font-bold opacity-70 uppercase tracking-widest text-[10px]">{offer.description || "Experimental Reward Node"}</p>
                     </div>
                     <div className="pt-4 flex items-center justify-between border-t border-current border-opacity-10">
-                      <code className="text-xs font-black tracking-[0.2em]">{offer.code}</code>
-                      <button className="px-5 py-2 rounded-full border border-current border-opacity-30 text-[10px] font-black uppercase tracking-widest hover:bg-current hover:text-inherit transition-all">
-                        Apply Node
+                      <code className="text-xs font-black tracking-[0.2em]">{offer.discountCode}</code>
+                      <button onClick={playClick} className="px-5 py-2 rounded-full border border-current border-opacity-30 text-[10px] font-black uppercase tracking-widest hover:bg-current hover:text-inherit transition-all">
+                        {t.apply}
                       </button>
                     </div>
                   </div>
@@ -547,41 +797,41 @@ export function MenuPage() {
       <footer className="fixed bottom-6 left-6 right-6 z-50">
         <div className="bg-white/80 backdrop-blur-xl border border-white/50 text-[#111] rounded-full p-2 flex items-center justify-around shadow-2xl shadow-black/5">
           <button 
-            onClick={() => setActiveTab('menu')}
+            onClick={() => { playClick(); setActiveTab('menu'); }}
             className={cn(
               "flex flex-col items-center gap-1 px-4 py-2 rounded-full transition-all duration-300",
               activeTab === 'menu' ? "bg-[#111] text-white" : "text-gray-400"
             )}
           >
             <Home size={18} />
-            <span className="text-[9px] font-black uppercase">Home</span>
+            <span className="text-[9px] font-black uppercase">{t.home}</span>
           </button>
           <button 
-            onClick={() => setActiveTab('offers')}
+            onClick={() => { playClick(); setActiveTab('offers'); }}
             className={cn(
               "flex flex-col items-center gap-1 px-4 py-2 rounded-full transition-all duration-300",
               activeTab === 'offers' ? "bg-[#111] text-white" : "text-gray-400"
             )}
           >
             <Info size={18} />
-            <span className="text-[9px] font-black uppercase">Offers</span>
+            <span className="text-[9px] font-black uppercase">{t.offers}</span>
           </button>
           <button 
-            onClick={() => navigate(`/${restaurantId}/cart`)}
+            onClick={() => { playClick(); navigate(`/${restaurantId}/cart`); }}
             className="flex flex-col items-center gap-1 px-4 py-2 text-gray-400"
           >
             <ShoppingCart size={18} />
-            <span className="text-[9px] font-black uppercase">Cart</span>
+            <span className="text-[9px] font-black uppercase">{t.cart}</span>
           </button>
           <button 
-            onClick={() => setActiveTab('profile')}
+            onClick={() => { playClick(); setActiveTab('profile'); }}
             className={cn(
               "flex flex-col items-center gap-1 px-4 py-2 rounded-full transition-all duration-300",
               activeTab === 'profile' ? "bg-[#111] text-white" : "text-gray-400"
             )}
           >
             <User size={18} />
-            <span className="text-[9px] font-black uppercase">Profile</span>
+            <span className="text-[9px] font-black uppercase">{t.profile}</span>
           </button>
         </div>
       </footer>

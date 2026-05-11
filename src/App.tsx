@@ -63,20 +63,23 @@ function AdminRedirect() {
   return <Navigate to={target || '/setup'} replace />;
 }
 
+import { CartProvider } from './context/CartContext';
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<RootRedirect />} />
-        <Route path="/setup" element={<SetupPage />} />
-        <Route path="/admin" element={<AdminRedirect />} />
-        <Route path="/:restaurantId/admin/*" element={<AdminPage />} />
-        <Route path="/:restaurantId" element={<MenuPage />} />
-        <Route path="/:restaurantId/item/:itemId" element={<ItemDetailPage />} />
-        <Route path="/:restaurantId/cart" element={<CartPage />} />
-        <Route path="/:restaurantId/admin/*" element={<AdminPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <CartProvider>
+        <Routes>
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="/setup" element={<SetupPage />} />
+          <Route path="/admin" element={<AdminRedirect />} />
+          <Route path="/:restaurantId/admin/*" element={<AdminPage />} />
+          <Route path="/:restaurantId" element={<MenuPage />} />
+          <Route path="/:restaurantId/item/:itemId" element={<ItemDetailPage />} />
+          <Route path="/:restaurantId/cart" element={<CartPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </CartProvider>
     </BrowserRouter>
   );
 }
