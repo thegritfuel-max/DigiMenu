@@ -11,11 +11,11 @@ import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { Copy, Facebook, Instagram, Youtube, Linkedin, MessageCircle, ExternalLink } from 'lucide-react';
 
 // Lazy initialize Gemini (will only work if key is provided)
-let genAIInstance: GoogleGenerativeAI | null = null;
+let genAIInstance: GoogleGenAI | null = null;
 function getGenAI() {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -23,10 +23,12 @@ function getGenAI() {
     return null;
   }
   if (!genAIInstance) {
-    genAIInstance = new GoogleGenerativeAI(apiKey);
+    genAIInstance = new GoogleGenAI({ apiKey });
   }
   return genAIInstance;
 }
+
+import { reviewFallbacks } from '../lib/reviewFallbacks';
 
 function ReviewSection({ restaurant, primaryColor }: { restaurant: Restaurant, primaryColor: string }) {
   const [rating, setRating] = useState(0);
@@ -38,32 +40,19 @@ function ReviewSection({ restaurant, primaryColor }: { restaurant: Restaurant, p
     setRating(stars);
     setGenerating(true);
     
-    const fallbacks: Record<number, string> = {
-      5: `Amazing experience at ${restaurant.name}! The food was incredible and the hospitality was top-notch. Highly recommend to everyone!`,
-      4: `Really good food and solid service at ${restaurant.name}. We enjoyed our meal and will definitely be coming back.`,
-      3: `Good experience. The food was decent and the staff was friendly. Worth a visit if you are nearby.`,
-      2: `Expected more from ${restaurant.name}. The taste was okay but there's room for improvement in service.`,
-      1: `Disappointed with the visit. Hope they improve their quality soon.`
-    };
+    // Artificial delay for "Neural Synthesis" feel
+    await new Promise(resolve => setTimeout(resolve, 800));
 
-    try {
-      const ai = getGenAI();
-      if (!ai) {
-        throw new Error("API Key missing");
-      }
-      
-      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = `Write a short, enthusiastic, and authentic restaurant review for "${restaurant.name}" based on a ${stars}-star rating. Mention great flavor, service, and atmosphere. Keep it under 30 words.`;
-      
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      setReview(response.text());
-    } catch (error) {
-      console.error("Gemini Error:", error);
-      setReview(fallbacks[stars as keyof typeof fallbacks] || fallbacks[5]);
-    } finally {
-      setGenerating(false);
-    }
+    const samples = reviewFallbacks[stars as keyof typeof reviewFallbacks] || reviewFallbacks[5];
+    const baseReview = samples[Math.floor(Math.random() * samples.length)];
+    
+    // Add minor personalization
+    const emojis = stars >= 4 ? ["✨", "🔥", "👌", "⭐", "😋"] : stars === 3 ? ["🤔", "⚖️", "😐"] : ["👎", "😒", "😟"];
+    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+    const finalReview = baseReview.replace(restaurant.name, restaurant.name) + (Math.random() > 0.5 ? ` ${randomEmoji}` : "");
+
+    setReview(finalReview);
+    setGenerating(false);
   };
 
   const copyToClipboard = () => {
@@ -383,7 +372,7 @@ function AddToCartButton({ item, addToCart, primaryColor, t }: { item: MenuItem,
 export function MenuPage() {
   const { restaurantId } = useParams<{ restaurantId: string }>();
   const navigate = useNavigate();
-  const { addToCart, cartItems } = useCart();
+  const { addToCart, cartItems, isLoaded } = useCart();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -455,7 +444,7 @@ export function MenuPage() {
   const primaryColor = restaurant?.primaryColor || '#FF6B00';
   const t = translations[language];
 
-  if (loading) {
+  if (loading || !isLoaded) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-white">
         <div className="relative w-16 h-16">
@@ -772,35 +761,37 @@ export function MenuPage() {
                           </div>
                         )}
                       </div>
-                      <Link to={`/${restaurantId}/item/${item.id}`} className="flex-1 flex flex-col justify-between py-1">
-                        <div>
-                          <div className="flex items-start gap-2 mb-1">
-                            <div className={cn(
-                              "w-3 h-3 rounded-sm border flex items-center justify-center p-0.5 mt-1",
-                              item.isVeg ? "border-green-600" : "border-red-600"
-                            )}>
-                              <div className={cn(
-                                "w-full h-full rounded-full",
-                                item.isVeg ? "bg-green-600" : "bg-red-600"
-                              )} />
+                         <div className="flex-1 flex flex-col justify-between py-1">
+                          <Link to={`/${restaurantId}/item/${item.id}`} className="block">
+                            <div>
+                              <div className="flex items-start gap-2 mb-1">
+                                <div className={cn(
+                                  "w-3 h-3 rounded-sm border flex items-center justify-center p-0.5 mt-1",
+                                  item.isVeg ? "border-green-600" : "border-red-600"
+                                )}>
+                                  <div className={cn(
+                                    "w-full h-full rounded-full",
+                                    item.isVeg ? "bg-green-600" : "bg-red-600"
+                                  )} />
+                                </div>
+                                <h3 className="font-black text-sm md:text-base leading-tight font-display text-gray-900 line-clamp-2">{item.name}</h3>
+                              </div>
+                              <p className="text-[10px] md:text-[11px] text-gray-500 line-clamp-2 mb-2 leading-tight font-medium opacity-80">{item.description}</p>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] text-gray-600 font-black flex items-center gap-1">
+                                  <Star size={12} className="fill-current text-red-500" /> {item.rating || 5}
+                                </span>
+                                <span className="text-[10px] text-gray-500 font-bold flex items-center gap-1">
+                                  <Clock size={12} /> 15-20 min
+                                </span>
+                              </div>
                             </div>
-                            <h3 className="font-black text-sm md:text-base leading-tight font-display text-gray-900 line-clamp-2">{item.name}</h3>
-                          </div>
-                          <p className="text-[10px] md:text-[11px] text-gray-500 line-clamp-2 mb-2 leading-tight font-medium opacity-80">{item.description}</p>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] text-gray-600 font-black flex items-center gap-1">
-                              <Star size={12} className="fill-current text-red-500" /> {item.rating || 5}
-                            </span>
-                            <span className="text-[10px] text-gray-500 font-bold flex items-center gap-1">
-                              <Clock size={12} /> 15-20 min
-                            </span>
+                          </Link>
+                          <div className="flex items-center justify-between mt-3">
+                            <span className="font-black text-lg text-[#111] font-display">₹{item.price}</span>
+                            <AddToCartButton item={item} addToCart={addToCart} primaryColor={primaryColor} t={t} />
                           </div>
                         </div>
-                        <div className="flex items-center justify-between mt-3">
-                          <span className="font-black text-lg text-[#111] font-display">₹{item.price}</span>
-                          <AddToCartButton item={item} addToCart={addToCart} primaryColor={primaryColor} t={t} />
-                        </div>
-                      </Link>
                     </motion.div>
                   ))}
                 </AnimatePresence>
@@ -819,40 +810,46 @@ export function MenuPage() {
 
         {/* Offers Tab */}
         {activeTab === 'offers' && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
             <header className="space-y-2">
-              <h1 className="text-3xl font-black font-display text-[#111]">{t.specialRewards}</h1>
-              <p className="text-gray-500 font-medium">{t.rewardSubtitle}</p>
+              <h1 className="text-3xl font-black font-display text-[#111]">{t.offers}</h1>
+              <p className="text-gray-500 font-medium">Active rewards and promotional nodes.</p>
             </header>
 
             <div className="grid gap-6">
-              {offers.map((offer, i) => (
-                <div 
-                  key={offer.id} 
-                  className={cn("p-8 rounded-[40px] relative overflow-hidden group shadow-lg")}
-                  style={{ backgroundColor: i % 2 === 0 ? '#111' : primaryColor, color: 'white' }}
+              {offers.map((offer) => (
+                <motion.div 
+                  key={offer.id}
+                  className="aspect-[16/8] rounded-[32px] overflow-hidden bg-white shadow-xl relative border border-gray-100"
+                  whileTap={{ scale: 0.98 }}
+                  onClick={playClick}
                 >
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-8 -mt-8" />
-                  <div className="relative z-10 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-50">Active Payload</span>
-                      <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                        <Tag size={14} />
+                   <img src={offer.imageUrl} className="w-full h-full object-cover" />
+                   <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent p-8 flex flex-col justify-center">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-black tracking-[0.3em] text-white/50 uppercase">Exclusive Node</span>
+                        <h3 className="text-white font-black text-2xl font-display leading-tight">{offer.title}</h3>
+                        <p className="text-white/70 text-xs font-medium max-w-[200px] line-clamp-2">{offer.description}</p>
                       </div>
-                    </div>
-                    <div>
-                      <h3 className="text-3xl font-black font-display leading-tight">{offer.title}</h3>
-                      <p className="font-bold opacity-70 uppercase tracking-widest text-[10px]">{offer.description || "Experimental Reward Node"}</p>
-                    </div>
-                    <div className="pt-4 flex items-center justify-between border-t border-current border-opacity-10">
-                      <code className="text-xs font-black tracking-[0.2em]">{offer.discountCode}</code>
-                      <button onClick={playClick} className="px-5 py-2 rounded-full border border-current border-opacity-30 text-[10px] font-black uppercase tracking-widest hover:bg-current hover:text-inherit transition-all">
-                        {t.apply}
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                      <div className="mt-4 flex items-center gap-3">
+                        <div className="px-4 py-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
+                          <code className="text-white font-black tracking-widest text-[10px]">{offer.discountCode}</code>
+                        </div>
+                        <button className="px-4 py-2 bg-white text-black rounded-xl font-black text-[9px] uppercase tracking-widest">
+                          {t.apply}
+                        </button>
+                      </div>
+                   </div>
+                </motion.div>
               ))}
+              {offers.length === 0 && (
+                <div className="p-12 text-center bg-white rounded-[40px] border border-gray-100 shadow-sm space-y-4">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-200">
+                    <Tag size={32} />
+                  </div>
+                  <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">No active nodes in your sector.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -941,10 +938,15 @@ export function MenuPage() {
           </button>
           <button 
             onClick={() => { playClick(); navigate(`/${restaurantId}/cart`); }}
-            className="flex flex-col items-center gap-1 px-4 py-2 text-gray-400"
+            className="flex flex-col items-center gap-1 px-4 py-2 text-gray-400 relative"
           >
             <ShoppingCart size={18} />
             <span className="text-[9px] font-black uppercase">{t.cart}</span>
+            {cartItems.length > 0 && (
+              <span className="absolute top-1 right-3 w-4 h-4 bg-orange-600 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
+              </span>
+            )}
           </button>
           <button 
             onClick={() => { playClick(); setActiveTab('profile'); }}

@@ -20,6 +20,7 @@ export function CartPage() {
     subtotal, 
     discountAmount, 
     total, 
+    isLoaded,
     appliedOffer, 
     applyOffer,
     clearCart 
@@ -43,6 +44,14 @@ export function CartPage() {
 
   const primaryColor = restaurant?.primaryColor || '#ea580c';
   const totalPayable = total + Math.round(total * 0.05);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="w-12 h-12 border-4 border-[#FF6B00] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim() || !restaurantId) return;
@@ -102,6 +111,14 @@ export function CartPage() {
       setIsOrdering(false);
     }
   };
+
+  if (!isLoaded || (restaurantId && !restaurant)) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   if (orderComplete) {
     const qrData = `ORDER: ${lastOrderId.substring(0, 6)}\nTABLE: ${tableNumber}\nTOTAL: ₹${totalPayable}\nITEMS:\n${cartItems.map(i => `- ${i.quantity}x ${i.name}`).join('\n')}`;
@@ -170,15 +187,24 @@ export function CartPage() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center space-y-6">
-        <div className="w-24 h-24 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center">
-          <ShoppingBag size={48} />
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 text-center space-y-12">
+        <div className="space-y-4">
+          <div className="w-32 h-32 bg-gray-50 text-gray-200 rounded-[40px] flex items-center justify-center mx-auto shadow-inner border border-gray-100">
+            <ShoppingBag size={64} strokeWidth={1.5} />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-black uppercase tracking-tighter">Empty Manifest</h1>
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest max-w-[240px] mx-auto leading-relaxed">No active protocols detected in your selection stack.</p>
+          </div>
         </div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-black uppercase tracking-tighter">Empty Manifest</h1>
-          <p className="text-gray-400 text-sm">No items detected in your selection protocols.</p>
-        </div>
-        <Link to={`/${restaurantId}`} className="text-orange-600 font-bold">Deploy Selection</Link>
+        
+        <Link 
+          to={`/${restaurantId}`} 
+          className="w-full max-w-[280px] bg-[#111] text-white py-5 rounded-[24px] font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3"
+        >
+          <ChevronLeft size={16} />
+          Back to Menu Node
+        </Link>
       </div>
     );
   }

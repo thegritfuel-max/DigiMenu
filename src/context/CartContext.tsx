@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useParams, useLocation } from 'react-router-dom';
 import { MenuItem, Offer } from '../types';
 
 interface CartItem extends MenuItem {
@@ -16,38 +17,50 @@ interface CartContextType {
   subtotal: number;
   discountAmount: number;
   total: number;
+  isLoaded: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { pathname } = useLocation();
+  // Extract restaurantId from pathname: /restaurantId/...
+  const restaurantId = pathname.split('/')[1] || undefined;
+  
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [appliedOffer, setAppliedOffer] = useState<Offer | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const cartKey = `cart_${restaurantId || 'global'}`;
+
   // Load cart from local storage on mount
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
+    if (restaurantId === undefined && !window.location.pathname.includes('setup')) return;
+    
+    const savedCart = localStorage.getItem(cartKey);
     try {
       if (savedCart) {
         const parsed = JSON.parse(savedCart);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           setCartItems(parsed);
         }
+      } else {
+        setCartItems([]);
       }
     } catch (e) {
       console.error('Failed to parse cart', e);
+      setCartItems([]);
     } finally {
       setIsLoaded(true);
     }
-  }, []);
+  }, [restaurantId, cartKey]);
 
   // Save cart to local storage whenever it changes
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('cart', JSON.stringify(cartItems));
+      localStorage.setItem(cartKey, JSON.stringify(cartItems));
     }
-  }, [cartItems, isLoaded]);
+  }, [cartItems, isLoaded, cartKey]);
 
   const addToCart = (item: MenuItem) => {
     setCartItems(prev => {
@@ -101,7 +114,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       applyOffer,
       subtotal,
       discountAmount,
-      total
+      total,
+      isLoaded
     }}>
       {children}
     </CartContext.Provider>

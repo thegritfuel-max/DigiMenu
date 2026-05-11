@@ -308,15 +308,31 @@ function AdminSettings({ user }: { user: FirebaseUser }) {
             />
           </div>
           <div>
-            <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block mb-2">Logo URL</label>
+            <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block mb-2">Neural Branding (Logo)</label>
             <div className="flex gap-4">
-               <input 
+              <input 
                 type="text" 
                 value={restaurant.logoUrl || ''}
                 onChange={e => setRestaurant({...restaurant, logoUrl: e.target.value})}
                 className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl py-4 px-6 focus:ring-2 focus:ring-orange-500 outline-none transition-all font-medium text-xs"
-                placeholder="https://..."
+                placeholder="Paste Matrix URL..."
               />
+              <label className="flex flex-col items-center justify-center p-2 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-all border-2 border-dashed border-gray-300">
+                <Upload size={16} className="text-gray-400" />
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => setRestaurant({...restaurant, logoUrl: reader.result as string});
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+              </label>
               {restaurant.logoUrl && (
                 <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gray-100 border border-gray-100">
                   <img src={restaurant.logoUrl} alt="logo" className="w-full h-full object-cover" />
@@ -377,36 +393,6 @@ function AdminSettings({ user }: { user: FirebaseUser }) {
               ))}
             </div>
           </div>
-
-          <div className="pt-6 border-t border-gray-100 space-y-4">
-               <div>
-                  <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block mb-2">Restaurant Branding (Logo)</label>
-                  <div className="flex gap-4">
-                     <input 
-                        className="flex-1 bg-gray-50 border-none rounded-2xl py-4 px-6 text-xs text-blue-600" 
-                        value={restaurant.logoUrl || ''} 
-                        onChange={e => setRestaurant({...restaurant, logoUrl: e.target.value})} 
-                        placeholder="Paste logo image URL here..."
-                     />
-                     <label className="flex flex-col items-center justify-center p-2 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-all border-2 border-dashed border-gray-300">
-                        <Upload size={16} className="text-gray-400" />
-                        <input 
-                           type="file" 
-                           className="hidden" 
-                           accept="image/*"
-                           onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                 const reader = new FileReader();
-                                 reader.onloadend = () => setRestaurant({...restaurant, logoUrl: reader.result as string});
-                                 reader.readAsDataURL(file);
-                              }
-                           }}
-                        />
-                     </label>
-                  </div>
-               </div>
-            </div>
 
             <div>
               <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block mb-2">Google Review Link</label>
@@ -554,13 +540,17 @@ function AdminOffers() {
       }
       setEditingOffer(null);
     } catch (e) {
-      console.error(e);
+      handleFirestoreError(e, OperationType.WRITE, `offers`);
     }
   };
 
   const deleteOffer = async (id: string) => {
     if (confirm('Delete this reward node?')) {
-      await deleteDoc(doc(db, 'restaurants', restaurantId!, 'offers', id));
+      try {
+        await deleteDoc(doc(db, 'restaurants', restaurantId!, 'offers', id));
+      } catch (e) {
+        handleFirestoreError(e, OperationType.DELETE, `offers/${id}`);
+      }
     }
   };
 
@@ -704,7 +694,9 @@ function AdminBanners() {
         await addDoc(collection(db, 'restaurants', restaurantId, 'banners'), { ...editingBanner, order: banners.length });
       }
       setEditingBanner(null);
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      handleFirestoreError(e, OperationType.WRITE, `banners`);
+    }
   };
 
   return (
@@ -803,7 +795,7 @@ function AdminCategories() {
       }
       setEditingCat(null);
     } catch (e) {
-      console.error(e);
+      handleFirestoreError(e, OperationType.WRITE, `categories`);
     }
   };
 
@@ -1016,12 +1008,18 @@ function AdminMenu() {
         await addDoc(collection(db, 'restaurants', restaurantId, 'menu_items'), editingItem);
       }
       setEditingItem(null);
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      handleFirestoreError(e, OperationType.WRITE, `menu_items`);
+    }
   };
 
   const deleteItem = async (id: string) => {
     if (confirm('Are you sure you want to delete this dish?')) {
-      await deleteDoc(doc(db, 'restaurants', restaurantId!, 'menu_items', id));
+      try {
+        await deleteDoc(doc(db, 'restaurants', restaurantId!, 'menu_items', id));
+      } catch (e) {
+        handleFirestoreError(e, OperationType.DELETE, `menu_items/${id}`);
+      }
     }
   };
 
