@@ -100,45 +100,59 @@ export function AdminPage() {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-[110] w-64 bg-black text-white flex flex-col p-6 space-y-8 transition-transform lg:relative lg:translate-x-0 lg:flex",
+        "fixed inset-y-0 left-0 z-[110] w-64 bg-black text-white flex flex-col p-6 transition-transform lg:relative lg:translate-x-0 lg:flex",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 px-2">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
             <div 
-              className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white shadow-lg"
-              style={{ backgroundColor: primaryColor, boxShadow: `0 10px 15px -3px ${primaryColor}4D` }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-black bg-[#00FF44] shadow-[0_0_20px_rgba(0,255,68,0.4)]"
             >
-              {restaurant?.name?.charAt(0) || 'S'}
+              {restaurant?.name?.charAt(0) || 'T'}
             </div>
-            <h1 className="text-lg font-black tracking-tighter uppercase truncate">{restaurant?.name || 'SCALORA'}</h1>
+            <div className="flex flex-col">
+              <h1 className="text-sm font-black tracking-tighter uppercase truncate text-gray-400 group-hover:text-white transition-colors">{restaurant?.name || 'TANDUR CORNER'}</h1>
+            </div>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-gray-400 hover:text-white">
             <X size={20} />
           </button>
         </div>
         
-        <nav className="flex-1 space-y-1">
-          <SidebarItem onClick={() => setSidebarOpen(false)} to="" icon={<LayoutDashboard size={20} />} label="Dashboard" exact primaryColor={primaryColor} />
-          <SidebarItem onClick={() => setSidebarOpen(false)} to="/menu" icon={<Utensils size={20} />} label="Menu Items" primaryColor={primaryColor} />
-          <SidebarItem onClick={() => setSidebarOpen(false)} to="/categories" icon={<ListFilter size={20} />} label="Categories" primaryColor={primaryColor} />
-          <SidebarItem onClick={() => setSidebarOpen(false)} to="/offers" icon={<Tag size={20} />} label="Offers & Promo" primaryColor={primaryColor} />
-          <SidebarItem onClick={() => setSidebarOpen(false)} to="/banners" icon={<ImageIcon size={20} />} label="Hero Banners" primaryColor={primaryColor} />
-          <SidebarItem onClick={() => setSidebarOpen(false)} to="/settings" icon={<Settings size={20} />} label="Settings" primaryColor={primaryColor} />
+        <nav className="flex-1 space-y-2">
+          <SidebarItem onClick={() => setSidebarOpen(false)} to="" icon={<LayoutDashboard size={20} />} label="Dashboard" exact />
+          <SidebarItem onClick={() => setSidebarOpen(false)} to="/menu" icon={<Utensils size={20} />} label="Menu Items" />
+          <SidebarItem onClick={() => setSidebarOpen(false)} to="/categories" icon={<ListFilter size={20} />} label="Categories" />
+          <SidebarItem onClick={() => setSidebarOpen(false)} to="/offers" icon={<Tag size={20} />} label="Offers & Promo" />
+          <SidebarItem onClick={() => setSidebarOpen(false)} to="/banners" icon={<ImageIcon size={20} />} label="Hero Banners" />
+          
+          <div className="pt-4 mt-4 border-t border-white/5">
+             <SidebarItem onClick={() => setSidebarOpen(false)} to="/settings" icon={<Settings size={20} />} label="Settings" isProminent />
+          </div>
+
+          <a 
+            href={`/${restaurantId}`} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5 hover:text-white transition-all mt-4"
+          >
+            <Globe size={20} />
+            View Public Menu
+          </a>
         </nav>
 
-        <div className="bg-white/5 rounded-2xl p-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-orange-600 overflow-hidden border border-white/10">
-               <img src={restaurant?.logoUrl || ''} className="w-full h-full object-cover" />
+        <div className="mt-auto pt-6">
+          <div className="bg-[#111111] rounded-2xl p-4 flex items-center gap-3 border border-white/5">
+            <div className="w-10 h-10 rounded-full bg-white overflow-hidden flex-shrink-0">
+               <img src={restaurant?.logoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${restaurant?.name}`} className="w-full h-full object-cover" />
             </div>
-            <div className="flex-1 truncate">
-              <p className="text-xs font-bold truncate text-white">{restaurant?.name}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-black truncate text-white uppercase tracking-tight">{restaurant?.name || 'Tandur Corner'}</p>
               <button 
                 onClick={() => auth.signOut()}
-                className="text-[10px] text-gray-500 font-bold hover:text-red-400 flex items-center gap-1"
+                className="text-[10px] text-gray-500 font-bold hover:text-red-400 flex items-center gap-1 uppercase tracking-widest"
               >
-                <LogOut size={10} /> Logout
+                Logout ➜
               </button>
             </div>
           </div>
@@ -161,6 +175,13 @@ export function AdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
+            <Link 
+              to={`/${restaurantId}`} 
+              target="_blank"
+              className="hidden sm:flex items-center gap-2 bg-gray-50 hover:bg-gray-100 px-4 py-2 rounded-xl text-xs font-bold text-gray-600 transition-all border border-gray-100"
+            >
+              <Globe size={14} /> View Menu
+            </Link>
             <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
               <Bell size={20} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-orange-600 rounded-full" />
@@ -194,11 +215,27 @@ export function AdminPage() {
   );
 }
 
-function SidebarItem({ to, icon, label, exact, onClick, primaryColor }: { to: string, icon: any, label: string, exact?: boolean, onClick?: () => void, primaryColor: string }) {
+function SidebarItem({ to, icon, label, exact, onClick, isProminent }: { to: string, icon: any, label: string, exact?: boolean, onClick?: () => void, isProminent?: boolean }) {
   const { restaurantId } = useParams<{ restaurantId: string }>();
   const location = useLocation();
   const fullPath = `/${restaurantId}/admin${to}`;
   const isActive = exact ? location.pathname === fullPath : location.pathname.startsWith(fullPath);
+
+  if (isProminent) {
+    return (
+      <Link 
+        to={fullPath}
+        onClick={onClick}
+        className={cn(
+          "flex items-center gap-3 px-4 py-4 rounded-2xl text-sm font-black transition-all shadow-2xl",
+          isActive ? "bg-[#00FF44] text-black shadow-[0_0_30px_rgba(0,255,68,0.3)]" : "text-gray-400 hover:text-white hover:bg-white/5"
+        )}
+      >
+        {icon}
+        {label}
+      </Link>
+    );
+  }
 
   return (
     <Link 
@@ -206,11 +243,15 @@ function SidebarItem({ to, icon, label, exact, onClick, primaryColor }: { to: st
       onClick={onClick}
       className={cn(
         "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
-        isActive ? "text-white shadow-lg" : "text-gray-400 hover:bg-white/5 hover:text-white"
+        isActive ? "text-white" : "text-gray-400 hover:bg-white/5 hover:text-white"
       )}
-      style={isActive ? { backgroundColor: primaryColor, boxShadow: `0 10px 15px -3px ${primaryColor}4D` } : {}}
     >
-      {icon}
+      <div className={cn(
+        "p-2 rounded-lg transition-colors",
+        isActive ? "text-[#00FF44]" : "text-gray-500"
+      )}>
+        {icon}
+      </div>
       {label}
     </Link>
   );
@@ -325,6 +366,54 @@ function AdminSettings() {
                    {lang === 'en' ? 'English' : 'Marathi'}
                  </button>
                ))}
+            </div>
+          </div>
+
+          <div className="pt-6 border-t border-gray-100">
+            <label className="text-[10px] uppercase font-black tracking-widest text-gray-400 block mb-4">Authorized Admin Clearance (Multiple Accounts)</label>
+            <div className="space-y-3">
+              {(restaurant.adminUids || []).map((uid, index) => (
+                <div key={index} className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <Lock size={16} className="text-gray-400" />
+                  <span className="flex-1 text-xs font-mono font-bold truncate">{uid}</span>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const newUids = [...(restaurant.adminUids || [])];
+                      newUids.splice(index, 1);
+                      setRestaurant({...restaurant, adminUids: newUids});
+                    }}
+                    className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  id="newAdminUid"
+                  placeholder="Paste Google User UID here..."
+                  className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl py-4 px-6 focus:ring-2 focus:ring-orange-500 outline-none text-xs font-mono"
+                />
+                <button 
+                  type="button"
+                  onClick={() => {
+                    const input = document.getElementById('newAdminUid') as HTMLInputElement;
+                    if (input.value && !restaurant.adminUids?.includes(input.value)) {
+                      setRestaurant({
+                        ...restaurant, 
+                        adminUids: [...(restaurant.adminUids || []), input.value]
+                      });
+                      input.value = '';
+                    }
+                  }}
+                  className="bg-black text-white px-6 rounded-2xl font-bold text-xs"
+                >
+                  Authorize
+                </button>
+              </div>
+              <p className="text-[9px] text-gray-400 italic">User UID can be found in their profile or by an existing admin. This allows multiple Google accounts to manage this lab.</p>
             </div>
           </div>
         </div>
@@ -801,16 +890,27 @@ function AdminMenu() {
     }
   };
 
+  const getFallbackImage = (name: string) => {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('biryani')) return 'https://images.unsplash.com/photo-1563379091339-03b21bc4a6f8?auto=format&fit=crop&q=80&w=800';
+    if (lowerName.includes('dal makhani')) return 'https://images.unsplash.com/photo-1546833998-877b37c2e5c6?auto=format&fit=crop&q=80&w=800';
+    if (lowerName.includes('paneer')) return 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&q=80&w=800';
+    return 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=800';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="font-black text-2xl">Menu Catalog</h3>
+        <div className="space-y-1">
+          <h3 className="font-black text-2xl">Culinary Inventory</h3>
+          <p className="text-gray-500 text-xs font-medium">Manage Dispatches & Flavor Nodes</p>
+        </div>
         <button 
-          onClick={() => setEditingItem({ name: '', price: 0, description: '', isVeg: true, isBestseller: false, categoryId: '' })}
-          className="text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg transition-all hover:scale-105 active:scale-95 leading-none"
-          style={{ backgroundColor: primaryColor, boxShadow: `0 10px 15px -3px ${primaryColor}4D` }}
+          onClick={() => setEditingItem({ name: '', price: 0, description: '', isVeg: true, isBestseller: false, categoryId: categories[0]?.id || '' })}
+          className="text-white px-6 py-4 rounded-3xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 shadow-2xl transition-all active:scale-95"
+          style={{ backgroundColor: primaryColor, boxShadow: `0 10px 25px -5px ${primaryColor}4D` }}
         >
-          <Plus size={20} /> Add New Dish
+          <Plus size={18} /> New Dish node
         </button>
       </div>
 
@@ -818,50 +918,51 @@ function AdminMenu() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
         <input 
           type="text" 
-          placeholder="Search by name or category..." 
-          className="w-full bg-white border border-gray-100 rounded-2xl py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-orange-500 shadow-sm transition-all"
+          placeholder="Filter dispatch catalog..." 
+          className="w-full bg-white border border-gray-100 rounded-2xl py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-orange-500 shadow-sm transition-all font-bold"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {items.filter(i => i.name.toLowerCase().includes(search.toLowerCase())).map(item => (
           <div key={item.id} className="bg-white rounded-[32px] overflow-hidden border border-gray-100 group shadow-sm hover:shadow-xl transition-all">
             <div className="aspect-square relative overflow-hidden bg-gray-50">
-              <img src={item.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+              <img src={item.imageUrl || getFallbackImage(item.name)} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+              <div className="absolute top-4 left-4 flex gap-2">
+                 {item.isVeg ? (
+                   <span className="bg-green-500/90 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest backdrop-blur-md">Veg</span>
+                 ) : (
+                   <span className="bg-red-500/90 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest backdrop-blur-md">Non-Veg</span>
+                 )}
+              </div>
               <div className="absolute top-4 right-4 flex gap-2 translate-y-[-10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
                 <button 
                    onClick={() => setEditingItem(item)}
-                   className="p-2 bg-white text-black rounded-xl shadow-lg"
+                   className="p-2 bg-white text-black rounded-xl shadow-lg hover:scale-110 transition-transform"
                 >
-                   <Settings size={16} />
+                   <Settings size={14} />
                 </button>
                 <button 
                    onClick={() => deleteItem(item.id)}
-                   className="p-2 bg-red-500 text-white rounded-xl shadow-lg hover:bg-red-600 transition-colors"
+                   className="p-2 bg-red-500 text-white rounded-xl shadow-lg hover:scale-110 transition-transform"
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={14} />
                 </button>
               </div>
             </div>
-            <div className="p-5 space-y-2 text-[#111111]">
-              <div className="flex justify-between items-start text-[#111111]">
-                <h4 className="font-bold leading-tight">{item.name}</h4>
-                <div className={cn(
-                  "w-3 h-3 rounded-sm border flex items-center justify-center p-0.5 mt-1",
-                  item.isVeg ? "border-green-600" : "border-red-600"
-                )}>
-                  <div className={cn("w-full h-full rounded-full", item.isVeg ? "bg-green-600" : "bg-red-600")} />
+            <div className="p-5 space-y-2">
+              <div className="flex justify-between items-start">
+                <div>
+                   <h4 className="font-black text-sm uppercase tracking-tight truncate leading-none">{item.name}</h4>
+                   <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                      {categories.find(c => c.id === item.categoryId)?.name || 'Uncategorized'}
+                   </p>
                 </div>
+                <p className="font-black text-sm">₹{item.price}</p>
               </div>
-              <p className="text-xs text-gray-400 line-clamp-2">{item.description}</p>
-              <div className="flex items-center justify-between pt-3">
-                <span className="font-black text-lg text-orange-600 uppercase tracking-tight">₹{item.price}</span>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 px-2 py-1 rounded-full">
-                  {item.isBestseller ? 'Bestseller' : 'Standard'}
-                </span>
-              </div>
+              <p className="text-[10px] text-gray-400 font-medium line-clamp-2 leading-relaxed">{item.description}</p>
             </div>
           </div>
         ))}
@@ -869,102 +970,116 @@ function AdminMenu() {
 
       <AnimatePresence>
         {editingItem && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEditingItem(null)} />
-             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white w-full max-w-2xl rounded-[40px] p-10 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
-                <h3 className="text-3xl font-black">Configure Dish</h3>
-                <div className="grid grid-cols-2 gap-6">
-                   <div className="space-y-4">
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Item Name</label>
-                        <input className="w-full bg-gray-50 border-none rounded-2xl py-4 px-6 font-bold" value={editingItem.name} onChange={e => setEditingItem({...editingItem, name: e.target.value})} />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Price (INR)</label>
-                        <input type="number" className="w-full bg-gray-50 border-none rounded-2xl py-4 px-6 font-bold" value={editingItem.price} onChange={e => setEditingItem({...editingItem, price: Number(e.target.value)})} />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Description</label>
-                        <textarea className="w-full bg-gray-50 border-none rounded-2xl py-4 px-6 font-medium text-sm h-32" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
-                      </div>
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0" onClick={() => setEditingItem(null)} />
+             <motion.div 
+                initial={{ scale: 0.9, opacity: 0, y: 40 }} 
+                animate={{ scale: 1, opacity: 1, y: 0 }} 
+                exit={{ scale: 0.9, opacity: 0, y: 40 }} 
+                className="relative bg-white w-full max-w-4xl rounded-[48px] overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] text-[#111111]"
+             >
+                <div className="md:w-5/12 bg-gray-50/50 p-8 flex flex-col gap-8 overflow-y-auto border-r border-gray-100">
+                   <div className="space-y-1">
+                      <h3 className="text-2xl font-black">Flavor Asset</h3>
+                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Image Matrix Integration</p>
                    </div>
-                   <div className="space-y-4">
+                   
+                   <div className="aspect-square rounded-[32px] overflow-hidden bg-white border border-gray-200 shadow-inner group relative">
+                      <img src={editingItem.imageUrl || getFallbackImage(editingItem.name || '')} className="w-full h-full object-cover" />
+                      <label className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-center p-6">
+                         <Upload size={32} className="text-white mb-3" />
+                         <span className="text-white text-[10px] font-black uppercase tracking-widest leading-tight">Initialize Neural Upload</span>
+                         <input 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => setEditingItem({...editingItem, imageUrl: reader.result as string});
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                         />
+                      </label>
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-4">
+                        <button 
+                           onClick={() => setEditingItem({...editingItem, isVeg: true})}
+                           className={cn("py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2", editingItem.isVeg ? "bg-green-50 text-green-700 border-green-200" : "bg-white text-gray-300 border-gray-100")}
+                        >Veg Mode</button>
+                        <button 
+                           onClick={() => setEditingItem({...editingItem, isVeg: false})}
+                           className={cn("py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2", !editingItem.isVeg ? "bg-red-50 text-red-700 border-red-200" : "bg-white text-gray-300 border-gray-100")}
+                        >Non-Veg</button>
+                   </div>
+                   <label className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 cursor-pointer shadow-sm">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Enable Bestseller Node</span>
+                      <input 
+                         type="checkbox" 
+                         checked={editingItem.isBestseller} 
+                         onChange={e => setEditingItem({...editingItem, isBestseller: e.target.checked})}
+                         className="w-5 h-5 accent-orange-600 rounded" 
+                      />
+                   </label>
+                </div>
+
+                <div className="flex-1 p-8 md:p-12 space-y-10 overflow-y-auto">
+                   <div className="space-y-6">
                       <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Research Cluster (Category)</label>
-                        <select 
-                          className="w-full bg-gray-50 border-none rounded-2xl py-4 px-6 font-bold"
-                          value={editingItem.categoryId || ''}
-                          onChange={e => setEditingItem({...editingItem, categoryId: e.target.value})}
-                        >
-                          <option value="">Select Cluster</option>
-                          {categories.map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                          ))}
-                        </select>
+                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-3">Item Designation</label>
+                         <input 
+                            placeholder="e.g. Hyderabadi Dum Biryani"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-3xl py-4 px-6 font-black text-lg focus:ring-2 focus:ring-black outline-none transition-all" 
+                            value={editingItem.name} 
+                            onChange={e => setEditingItem({...editingItem, name: e.target.value})} 
+                         />
                       </div>
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Static Image (800x800 recommended)</label>
-                        <div className="flex gap-4">
-                           <input 
-                              className="flex-1 bg-gray-50 border-none rounded-2xl py-4 px-6 text-xs" 
-                              value={editingItem.imageUrl} 
-                              onChange={e => setEditingItem({...editingItem, imageUrl: e.target.value})} 
-                              placeholder="URL starts with https://"
-                           />
-                           <label className="w-14 h-14 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-all">
-                              <Upload size={16} className="text-gray-400" />
-                              <input 
-                                 type="file" 
-                                 className="hidden" 
-                                 accept="image/*"
-                                 onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                       const reader = new FileReader();
-                                       reader.onloadend = () => setEditingItem({...editingItem, imageUrl: reader.result as string});
-                                       reader.readAsDataURL(file);
-                                    }
-                                 }}
-                              />
-                           </label>
-                           {editingItem.imageUrl && <img src={editingItem.imageUrl} className="w-14 h-14 rounded-2xl object-cover border border-gray-100 shadow-sm" />}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Gallery Images (Comma separated)</label>
-                        <textarea 
-                          className="w-full bg-gray-50 border-none rounded-2xl py-4 px-6 text-xs h-20" 
-                          value={editingItem.images?.join(', ') || ''} 
-                          onChange={e => setEditingItem({...editingItem, images: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})} 
-                          placeholder="link1, link2..."
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">AR Model / 3D URL</label>
-                        <input className="w-full bg-gray-50 border-none rounded-2xl py-4 px-6 text-xs text-orange-600 font-bold" value={editingItem.arModelUrl} onChange={e => setEditingItem({...editingItem, arModelUrl: e.target.value})} placeholder="https://..." />
-                        <p className="text-[10px] text-gray-400 mt-2 italic">*Link this to a glTF or specific AR viewer link.</p>
-                      </div>
-                      <div className="flex gap-4">
-                         <div className="flex-1">
-                            <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Diet</label>
-                            <select className="w-full bg-gray-50 border-none rounded-2xl py-4 px-6 font-bold" value={editingItem.isVeg ? 'veg' : 'non-veg'} onChange={e => setEditingItem({...editingItem, isVeg: e.target.value === 'veg'})}>
-                               <option value="veg">Veg</option>
-                               <option value="non-veg">Non-Veg</option>
+                      <div className="grid grid-cols-2 gap-6">
+                         <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-3">Credit Value (₹)</label>
+                            <input 
+                               type="number"
+                               className="w-full bg-gray-50 border border-gray-100 rounded-3xl py-4 px-6 font-black focus:ring-2 focus:ring-black outline-none transition-all" 
+                               value={editingItem.price} 
+                               onChange={e => setEditingItem({...editingItem, price: Number(e.target.value)})} 
+                            />
+                         </div>
+                         <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-3">Cluster ID</label>
+                            <select 
+                               className="w-full bg-gray-50 border border-gray-100 rounded-3xl py-4 px-6 font-bold text-sm h-[60px] focus:ring-2 focus:ring-black outline-none transition-all"
+                               value={editingItem.categoryId}
+                               onChange={e => setEditingItem({...editingItem, categoryId: e.target.value})}
+                            >
+                               <option value="">Select Cluster</option>
+                               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                          </div>
-                         <div className="flex-1">
-                            <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Priority</label>
-                            <div className="flex items-center gap-2 pt-4">
-                               <input type="checkbox" checked={editingItem.isBestseller} onChange={e => setEditingItem({...editingItem, isBestseller: e.target.checked})} />
-                               <span className="text-xs font-bold text-gray-700">Bestseller</span>
-                            </div>
-                         </div>
+                      </div>
+                      <div>
+                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-3">Item Spec (Description)</label>
+                         <textarea 
+                            rows={3}
+                            placeholder="Brief description of culinary profile..."
+                            className="w-full bg-gray-50 border border-gray-100 rounded-3xl py-4 px-6 text-sm font-medium focus:ring-2 focus:ring-black outline-none transition-all" 
+                            value={editingItem.description} 
+                            onChange={e => setEditingItem({...editingItem, description: e.target.value})} 
+                         />
                       </div>
                    </div>
-                </div>
-                <div className="flex gap-4 pt-6">
-                   <button onClick={() => setEditingItem(null)} className="flex-1 py-4 font-bold text-gray-400">Abort Changes</button>
-                   <button onClick={saveItem} className="flex-1 bg-black text-white rounded-[24px] py-4 font-black uppercase tracking-widest text-sm shadow-xl shadow-gray-200">Deploy Dish</button>
+
+                   <div className="flex gap-4 pt-6">
+                      <button onClick={() => setEditingItem(null)} className="flex-1 py-5 font-black uppercase tracking-widest text-[10px] text-gray-400 hover:text-red-500 transition-colors">Abort Config</button>
+                      <button 
+                         onClick={saveItem} 
+                         className="flex-[2] bg-black text-white rounded-[32px] py-5 font-black uppercase tracking-widest text-xs shadow-2xl active:scale-95 transition-all"
+                      >
+                         Execute Deployment
+                      </button>
+                   </div>
                 </div>
              </motion.div>
           </div>

@@ -626,7 +626,7 @@ export function MenuPage() {
                       className="bg-white rounded-[24px] p-4 flex gap-4 transition-all border border-gray-100 shadow-sm overflow-hidden"
                       onClick={playClick}
                     >
-                      <div className="relative w-28 h-28 rounded-[16px] overflow-hidden flex-shrink-0 bg-gray-100">
+                      <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-[24px] overflow-hidden flex-shrink-0 bg-gray-100 shadow-inner">
                         <FoodCardGallery 
                           images={item.images || (item.imageUrl ? [item.imageUrl] : [])} 
                           name={item.name} 
@@ -635,18 +635,18 @@ export function MenuPage() {
                         />
                         {item.isBestseller && (
                           <div 
-                            className="absolute top-2 left-2 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest"
-                            style={{ backgroundColor: primaryColor }}
+                            className="absolute top-2 left-2 text-white text-[7px] md:text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest shadow-lg"
+                            style={{ backgroundColor: '#FF2A00' }}
                           >
-                            Bestseller
+                            BESTSELLER
                           </div>
                         )}
                       </div>
                       <Link to={`/${restaurantId}/item/${item.id}`} className="flex-1 flex flex-col justify-between py-1">
                         <div>
-                          <div className="flex items-center gap-1.5 mb-1">
+                          <div className="flex items-start gap-2 mb-1">
                             <div className={cn(
-                              "w-3 h-3 rounded-sm border flex items-center justify-center p-0.5",
+                              "w-3 h-3 rounded-sm border flex items-center justify-center p-0.5 mt-1",
                               item.isVeg ? "border-green-600" : "border-red-600"
                             )}>
                               <div className={cn(
@@ -654,19 +654,19 @@ export function MenuPage() {
                                 item.isVeg ? "bg-green-600" : "bg-red-600"
                               )} />
                             </div>
-                            <h3 className="font-bold text-base leading-tight font-display">{item.name}</h3>
+                            <h3 className="font-black text-sm md:text-base leading-tight font-display text-gray-900 line-clamp-2">{item.name}</h3>
                           </div>
-                          <p className="text-[11px] text-gray-500 line-clamp-2 mb-2 leading-relaxed">{item.description}</p>
+                          <p className="text-[10px] md:text-[11px] text-gray-500 line-clamp-2 mb-2 leading-tight font-medium opacity-80">{item.description}</p>
                           <div className="flex items-center gap-3">
-                            <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
-                              <Star size={12} className="fill-current" style={{ color: primaryColor }} /> {item.rating || 4.5}
+                            <span className="text-[10px] text-gray-600 font-black flex items-center gap-1">
+                              <Star size={12} className="fill-current text-red-500" /> {item.rating || 5}
                             </span>
-                            <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
+                            <span className="text-[10px] text-gray-500 font-bold flex items-center gap-1">
                               <Clock size={12} /> 15-20 min
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center justify-between mt-3">
                           <span className="font-black text-lg text-[#111] font-display">₹{item.price}</span>
                           <button 
                             onClick={(e) => { 
@@ -675,8 +675,8 @@ export function MenuPage() {
                               playClick(); 
                               addToCart(item);
                             }}
-                            className="text-white px-5 py-2 rounded-[12px] text-xs font-black shadow-lg active:scale-95 transition-all"
-                            style={{ backgroundColor: primaryColor, boxShadow: `0 10px 15px -3px ${primaryColor}33` }}
+                            className="text-white px-6 py-2.5 rounded-2xl text-xs font-black shadow-xl active:scale-95 transition-all"
+                            style={{ backgroundColor: '#FF2A00', boxShadow: `0 8px 20px -4px rgba(255, 42, 0, 0.4)` }}
                           >
                             {t.add}
                           </button>
